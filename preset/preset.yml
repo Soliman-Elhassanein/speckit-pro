@@ -1,0 +1,25 @@
+schema_version: "1.0"
+
+preset:
+  id: "universal-profile"
+  name: "Universal Profile"
+  version: "2.0.0"
+  description: "Evidence-aware converge for the Spec Kit Universal Adoption and Execution Profile"
+  author: "Soliman-Elhassanein"
+
+requires:
+  # Verified on specify-cli 0.13.3; needs a stock converge command and the wrap strategy.
+  speckit_version: ">=0.13.0"
+
+provides:
+  templates:
+    - type: "command"
+      name: "speckit.converge"
+      file: "commands/speckit.converge.md"
+      description: "Converge on current evidence with three outcomes and append-only remediation"
+      strategy: "wrap"
+
+tags:
+  - "verification"
+  - "converge"
+  - "governance"
