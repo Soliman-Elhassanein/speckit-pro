@@ -456,7 +456,14 @@ Never impersonate a person/organization or fabricate a record as genuine. Use tr
 
 Read and obey configured tools; do not add competing formatters/checkers by preference. Run formatting after edits, then rerun affected checks because relevant state changed. Run complete applicable layer gates before completion. The repository's actual commands are authoritative.
 
-Honor zero-error gates and introduce no new warnings. Never use `--no-verify` to skip a gate. Narrow justified suppressions require a documented reason and cannot hide a correctable defect.
+Typical lint/format/type gates per ecosystem (the repository's configured tool always wins):
+
+- Python → ruff (`ruff check` + `ruff format`), or flake8/black/isort; mypy for types
+- JS/TS → ESLint + Prettier; `tsc` for types
+- Go → gofmt/goimports + go vet
+- Rust → rustfmt + clippy
+
+Honor zero-error gates and introduce no new warnings. A red CI pipeline gets fixed, never merged around; a gate that is routinely overridden guarantees nothing. Never use `--no-verify` to skip a gate. Narrow justified suppressions require a documented reason and cannot hide a correctable defect.
 
 ## 10. Local version control
 
@@ -466,7 +473,7 @@ Honor zero-error gates and introduce no new warnings. Never use `--no-verify` to
 4. Commit every coherent completed unit after applicable checks and documentation, without waiting for another request. Commit a completed prior unit before starting an unrelated request. Before the final report, commit safe authorized changes or explain why a coherent commit is blocked.
 5. Stage explicit reviewed paths; review the staged diff for unrelated edits and the material [section 3.8](#38-reproducibility-configuration-and-secrets) excludes. Avoid blind all-files staging. One logical change per commit; follow repository history with a meaningful `type: what changed` message and feature-qualified task references where relevant.
 6. A blocked checkpoint may be preserved only with a truthful message identifying its state. Never call failing/unverified work complete.
-7. Keep operations local. External synchronization, hosted review, remote task conversion, and uploads are neither authorized nor required by this standard.
+7. Keep operations local. External synchronization, hosted review, remote task conversion, and uploads are neither authorized nor required by this standard. Never force-push, even when a push has been authorized.
 8. Obtain explicit authorization before hard reset, restoring/discarding uncommitted changes, history rewrite, branch deletion, or other destructive/irreversible operations. Do not infer it from authorization for ordinary commits.
 9. Use truthful authorship; no invented human/model co-author identities.
 
