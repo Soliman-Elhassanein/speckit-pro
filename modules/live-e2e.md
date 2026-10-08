@@ -5,7 +5,7 @@
 
 The core profile still governs: statuses, evidence, freshness, and completion follow its sections 6–8, and every concrete value comes from the target project.
 
-Produce or amend a runbook equivalent to `docs/live-testing.md`, linked to the native and content guides where present. Separate setup, reachability, compile/runtime, acceptance observations, diagnostics, evidence, and teardown.
+Produce or amend a live-testing runbook in the project's documentation, linked to the native and content guides where present. Separate setup, reachability, compile/runtime, acceptance observations, diagnostics, evidence, and teardown.
 
 ## 1. Prerequisites and topology
 
@@ -19,18 +19,18 @@ Produce or amend a runbook equivalent to `docs/live-testing.md`, linked to the n
 ## 2. Acceptance walkthrough
 
 1. Run the installed app/client against the local test stack and establish the actual user role/scope.
-2. Visit required hierarchy/navigation, content, offline/runtime, and operator surfaces. Check relevant locale/directionality, state/recovery, and no crashes; capture sanitized rendered evidence.
+2. Visit the required navigation, content, and operator surfaces. Check relevant locale/directionality, state/recovery, and no crashes; capture sanitized rendered evidence.
 3. Exercise positive and negative authorization through the actual interface. Correlate the response/server record with user-visible feedback and resulting state. A server refusal does not alone prove the user sees an actionable reason.
 4. For downloadable content, verify progress/completion and correct control-state changes; disable **all relevant transport** and verify the network is actually unavailable, then open/play each promised type from local storage. Merely disabling cellular data is insufficient if another transport remains usable.
 5. Attempt a new download offline. Assert the approved user message, queued behavior, automatic resume/retry on reconnection, and resulting content integrity where promised.
-6. Exercise live refresh after operator updates, manual refresh, background/resume, and active-context changes. Assert that context labels, displayed descendants, caches, and navigation reconcile together; stale descendant pages must not expose the previous context if the specification promises their closure.
+6. Exercise live refresh after operator updates, manual refresh, background/resume, and context changes. Assert that labels, lists, caches, and navigation reconcile together; a screen must not keep showing data from a previous context when the specification promises it closes or updates.
 7. Record measurements and evidence per AS/TR/SC.
 
 ## 3. Repeatable E2E coordinator
 
 Where the project has an existing end-to-end command, preserve and document it. If the current requirements justify building one, use isolated test-only actors/data, real permitted operator submissions, client refresh, sanitized diagnostics/screenshots/timings, and teardown. Constrain credentials and destinations; reject accidental production targets. Do not expose tokens/passwords through CLI arguments or retained traces. Keep exact commands project-specific in the resulting runbook.
 
-## 4. Local phones and optional tunnels
+## 4. Physical devices and optional tunnels
 
 Use a reachable private address, supported device forwarding, or another approved local route as appropriate. Treat API and object storage as separate endpoints when the topology requires it. Build-time endpoint configuration binds a build to that configuration; record it without retaining sensitive/transient hostnames.
 

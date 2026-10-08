@@ -65,7 +65,7 @@ Record the following in `docs/spec-kit-adoption.md`, or the documented equivalen
 |---|---|
 | Product and scope | Purpose, current request, approved non-goals, active feature(s), superseded work |
 | Layers and ownership | Authoritative data, authentication, authorization, invariants, contracts, consumers, trust boundaries |
-| Actors | End users, staff/operators, exceptional users, service accounts, ownership and scopes |
+| Actors | End users, operators/administrators, exceptional users, service accounts, ownership and scopes |
 | Interfaces | Official user/operator surfaces, APIs, CLI/library contracts, existing navigation |
 | Locale and accessibility | Languages, directionality, accessibility baseline, target capabilities |
 | Data policy | Retention, archive, deletion, external content exceptions, correction/audit rules |
@@ -142,7 +142,7 @@ Validate declarative MUST language, headings, dates, placeholders, consistency, 
 - Resolve supported locale(s), directionality, platforms, accessibility baseline, and intended user capabilities.
 - Require understandable task labels, visible state, sufficient contrast/targets, shallow navigation, keyboard/screen-reader behavior where relevant, and explicit loading, empty, error, retry, and recovery states.
 - Validate promised layout/usability using rendered screens and the appropriate browser, simulator, physical device, accessibility tool, or operator walkthrough.
-- String existence or screenshot-text matching alone does not prove dimensions, target size, focus behavior, RTL layout, or accessibility. Use measurements and interactions relevant to the acceptance claim.
+- String existence or screenshot-text matching alone does not prove dimensions, target size, focus behavior, text-direction layout, or accessibility. Use measurements and interactions relevant to the acceptance claim.
 
 ### 3.4 Data preservation, deletion, and exceptions
 
@@ -154,7 +154,7 @@ Validate declarative MUST language, headings, dates, placeholders, consistency, 
 ### 3.5 Simplicity and explicit non-goals
 
 - Preserve approved non-goals and settled decisions. Build the smallest complete architecture for the active requirement.
-- Do not create speculative services, framework layers, future clients, or parallel staff applications.
+- Do not create speculative services, framework layers, future clients, or parallel applications.
 - Add dependencies or infrastructure only for a current requirement; prefer the standard library or an existing dependency when sufficient.
 - Record justified constitutional exceptions in plan Complexity Tracking, with rationale, impact, and verification. An exception cannot silently remove security or completion gates.
 
@@ -181,7 +181,7 @@ Adopt [sections 6–8](#6-testing-policy) as a constitutional principle: no stor
 
 ### 3.9 Module principles
 
-For each applicable [optional module](#12-optional-modules), add the governance rules that module defines, such as scoped staff/operator administration. Record each inapplicable module as N/A with its concrete reason rather than inventing the capability.
+For each applicable [optional module](#12-optional-modules), add the governance rules that module defines, such as scoped operator administration. Record each inapplicable module as N/A with its concrete reason rather than inventing the capability.
 
 ### 3.10 Repository-wide engineering obligations
 
@@ -200,7 +200,7 @@ Include [sections 9–11](#9-execution-and-engineering-discipline) in governance
 | `T001` | Task, local to its feature's tasks file | `[NNN] T001: <description>` |
 | `CHK001` | Requirements-quality checklist item | Qualify with owning feature/checklist when needed |
 
-Each feature may restart task numbering at T001. Bare task IDs are valid inside the owning tasks file; use `[NNN] TXXX` in commits, cross-feature artifacts, verification, and reports. Preserve suffixes and legacy IDs, such as `FR-009a` or `US1/AC2`, with stable aliases. Never silently renumber. Append above the current maximum, respecting the existing numbering convention. Preserve checked history, approved decisions, dependencies, and supersession whenever an artifact is updated.
+Each feature may restart task numbering at T001. Bare task IDs are valid inside the owning tasks file; use `[NNN] TXXX` in commits, cross-feature artifacts, verification, and reports. Preserve suffixes and legacy IDs, such as `FR-001a` or `US1/AC2`, with stable aliases. Never silently renumber. Append above the current maximum, respecting the existing numbering convention. Preserve checked history, approved decisions, dependencies, and supersession whenever an artifact is updated.
 
 ### 4.2 Feature artifacts
 
@@ -295,7 +295,7 @@ If the workflow engine cannot express a repair loop, stop with an honest NOT DON
 ### 6.1 Design tests around promises
 
 1. Every FR and AS requires meaningful TR assertions covering its specified positive, negative, boundary, authorization, failure, and recovery behavior. Every required TR needs an executable selector or specified observation method.
-2. Choose the smallest useful layer: unit for domain rules; integration/contract for persistence/API interactions; actual staff request/form/action or browser tests for operator workflows; rendered/accessibility tests for UI promises; native/device tests for OS behavior.
+2. Choose the smallest useful layer: unit for domain rules; integration/contract for persistence/API interactions; actual operator request/form/action or browser tests for operator workflows; rendered/accessibility tests for UI promises; native/device tests for OS behavior.
 3. Cover stale/revoked authority and transaction rollback/retry where specified. Test the response plus the resulting state and the absence of forbidden changes.
 4. Seed the fixtures needed to reach negative paths. A cross-scope test requires a valid target outside the actor's scope; testing only empty lists does not exercise refusal.
 5. Tests must assert promised outcomes rather than accidental implementation details. Screenshots require explicit evaluation.
@@ -408,7 +408,7 @@ Resolve template placeholders when creating concrete records. Do not require an 
 
 Keep required logs, screenshots, traces, timing measurements, archives, and other acceptance records under a planned repository-owned local evidence path. Decide explicitly which safe artifacts are committed or retained through documented local reproduction/retention. A required evidence link must resolve; do not cite an ephemeral artifact as durable proof.
 
-Scan plain **and compressed** outputs for the material [section 3.8](#38-reproducibility-configuration-and-secrets) excludes, plus cookies, OTPs, and temporary public endpoints, before retention/staging. Use synthetic/disposable actors and redact at capture where possible. Treat browser traces and server logs as potentially credential-bearing. Retain only what the claim needs.
+Scan plain **and compressed** outputs for the material [section 3.8](#38-reproducibility-configuration-and-secrets) excludes, plus cookies, one-time codes, and temporary public endpoints, before retention/staging. Use synthetic/disposable actors and redact at capture where possible. Treat browser traces and server logs as potentially credential-bearing. Retain only what the claim needs.
 
 ## 8. Completion and convergence
 
@@ -494,7 +494,7 @@ Each module is a separate file. Decide applicability during [discovery](#11-insp
 |---|---|
 | [modules/live-e2e.md](modules/live-e2e.md) | Running services and at least one client that talks to them |
 | [modules/native-platforms.md](modules/native-platforms.md) | Native code, or promises about OS-level behavior on a specific platform |
-| [modules/admin-content.md](modules/admin-content.md) | Staff/operator roles, moderated or operator-managed content, uploaded media, or stateful enrollment/progression |
+| [modules/admin-content.md](modules/admin-content.md) | Operator/administrator roles, user-reported or operator-managed content, uploaded files or media, or multi-step workflows whose state advances over time |
 | [modules/brand-assets.md](modules/brand-assets.md) | Shared identity assets used on more than one surface |
 
 ## 13. Adoption audit and validation

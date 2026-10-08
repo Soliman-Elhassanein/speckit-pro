@@ -31,7 +31,7 @@ Compilation, local unit/widget tests, native runtime, visual rendering, and phys
 - Resolve backend connectivity from that environment. Run configured analysis/unit checks, platform builds, and simulator integration separately. An unsigned build demonstrates only the relevant build claim; it does not certify install/signing, rendering, or physical behavior.
 - If a VM can compile but cannot provide required graphics/simulator functionality, retain compile evidence and mark rendered/device checks BLOCKED. Do not equate a booted VM with a working simulator.
 - Use a locally installed signed development build where physical behavior requires it. Verify the actual account/signing prerequisites rather than assuming every development test needs a paid account. Some hardware-specific features are unavailable in simulation. See Apple's [Running your app on simulated or physical devices](https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices).
-- Define explicit physical observations for each promised OS integration, such as background/lock-screen audio controls, media visibility, and backup exclusion. Verify current platform capability for each.
+- Define explicit physical observations for each promised OS integration, such as background execution, notifications, lock-screen controls, file visibility, or backup behavior. Verify current platform capability for each.
 
 ## 4. Resource, lifecycle, and setup discipline
 
