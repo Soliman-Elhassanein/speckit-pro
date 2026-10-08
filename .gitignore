@@ -3,6 +3,3 @@
 Thumbs.db
 *~
 *.swp
-
-# Spec Kit preset build output
-.composed/
