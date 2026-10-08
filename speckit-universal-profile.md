@@ -21,7 +21,7 @@ Adoption and application completion are separate conclusions. Adopting this prof
 |---|---|
 | `speckit-universal-profile.md` (this file) | Always. The complete core rules. |
 | [modules/](modules/) | One file per product module. Read and apply only those that [section 12](#12-optional-modules) marks applicable. |
-| [preset/](preset/) | Spec Kit preset that installs the converge behavior of [section 5.9](#59-speckit-converge). |
+| [preset/](preset/) | The converge rules of [section 5.9](#59-speckit-converge), with a script and a Spec Kit preset to install them. |
 
 ### Navigation
 
@@ -232,6 +232,7 @@ Read assertions when auditing coverage. A matching marker, test name, or matrix 
 
 ### 5.1 Integration contract
 
+- Work with the integration the project already uses. Do not install, add, or switch an agent integration, or create another agent's directory, unless the user asks for it.
 - Discover all actual active integration paths and invocation forms. Dotted slash commands, hyphenated skills, `$skill` mentions, and shell CLI subcommands are not interchangeable. Verify installed help/schema rather than assuming a version. Official Spec Kit distinguishes agentic invocations from CLI operations; see its [Quickstart](https://github.github.com/spec-kit/quickstart.html) and [Extensions reference](https://github.github.com/spec-kit/reference/extensions.html).
 - Amend every applicable active skill/command and its authoritative source template so regeneration does not restore weaker behavior. Prefer the installation's supported customization mechanism, such as a preset, over hand-editing generated files. Preserve frontmatter, required fields, invocation syntax, argument handling, feature-selection controls, provenance, and compatibility.
 - Synchronize root and layer agent guidance (`AGENTS.md`, `CLAUDE.md`, or equivalents) and feature templates. Concrete runtime guidance must name actual commands and working directories.
@@ -272,13 +273,17 @@ Read intent, design, tasks, and evidence together. Establish the baseline, searc
 
 Converge compares current implementation, meaningful assertions, and current evidence against spec/plan/tasks. Its only allowed file mutation is appending deduplicated remediation tasks to `tasks.md`, and it reports exactly one of `tasks_appended`, `gaps_remaining`, or `converged`. No new tasks is not equivalent to converged.
 
-The complete rules are shipped once, in [preset/commands/speckit.converge.md](preset/commands/speckit.converge.md), which wraps the stock converge command. Install them with the Spec Kit CLI from the target project root:
+The complete rules are shipped once, in [preset/commands/speckit.converge.md](preset/commands/speckit.converge.md). Add them to the converge command of the integration the project already uses, from the target project root:
 
 ```sh
+# generic integration with a custom commands directory, such as .agent/commands
+sh <path-to-this-standard>/preset/apply-converge.sh .agent/commands/speckit.converge.md
+
+# built-in integrations
 specify preset add --dev <path-to-this-standard>/preset
 ```
 
-This was verified on specify-cli 0.13.3 with the Claude, Codex (skills), Gemini, Copilot, OpenCode, and Cursor integrations. The `generic` custom-commands-directory integration does not pick up preset command overrides; there, apply the rules in that file to the installed converge command by hand. Removing the preset deletes the composed command; restore the stock one with `specify integration upgrade <integration>`.
+The script inserts the rules into the installed Markdown command and is safe to run again; `specify integration status` then reports that file as a modified managed file, which is the expected customization. The preset wraps the stock command and was verified on specify-cli 0.13.3 with the Claude, Codex (skills), Gemini, Copilot, OpenCode, and Cursor integrations; it does not reach the `generic` integration. Removing the preset deletes the composed command; restore the stock one with `specify integration upgrade <integration>`.
 
 ### 5.10 `speckit-checklist`
 
