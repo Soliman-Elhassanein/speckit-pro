@@ -3,7 +3,7 @@ schema_version: "1.0"
 extension:
   id: baseline
   name: "Project Baseline"
-  version: "0.1.0"
+  version: "0.2.0"
   description: "Project memory beside the constitution: product.md (what), architecture.md (how), decisions.md (why). Read before specify and plan, changed only with approval, and checked by a script."
   category: "process"
   effect: "read-write"
@@ -24,20 +24,41 @@ provides:
     - name: speckit.baseline.check
       file: commands/speckit.baseline.check.md
       description: "Run the deterministic baseline check and recalculate delivery status"
+    - name: speckit.baseline.review
+      file: commands/speckit.baseline.review.md
+      description: "After implement: review the finished code against the architecture rules and boundaries, and turn violations into tasks"
+    - name: speckit.baseline.reconcile
+      file: commands/speckit.baseline.reconcile.md
+      description: "Reconcile code that changed outside the process with the baseline and the specs"
+    - name: speckit.baseline.recover
+      file: commands/speckit.baseline.recover.md
+      description: "Build the first baseline for a project that already has code, from evidence, for the user to approve"
 
 hooks:
   before_specify:
     command: speckit.baseline.context
     optional: false
     description: "Choose the path for this request and load the product baseline"
+  after_specify:
+    command: speckit.baseline.check
+    optional: false
+    description: "Pin the baseline entries the new spec cites"
   before_plan:
     command: speckit.baseline.context
     optional: false
     description: "Load the architecture baseline and decisions"
+  after_plan:
+    command: speckit.baseline.check
+    optional: false
+    description: "Pin the baseline entries the new plan cites"
   before_implement:
     command: speckit.baseline.check
     optional: false
     description: "Stop implementation while the baseline check fails"
+  after_implement:
+    command: speckit.baseline.review
+    optional: false
+    description: "Review the finished code against the architecture rules and boundaries"
   after_converge:
     command: speckit.baseline.check
     optional: false

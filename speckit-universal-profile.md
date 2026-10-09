@@ -315,6 +315,14 @@ A feature folder under `specs/` remains one change with its proof. Four laws gov
 3. The agent proposes; the user approves. Only the baseline amend command edits the three baseline files, and code never becomes correct because a baseline file was edited to match it.
 4. Process weight follows change size. A new behavior takes the full path; a bug fix and a behavior-preserving change take shorter ones and create no spec.
 
+The check script also guards the baseline against drift:
+
+- **Pins.** Each baseline entry a spec or plan cites is pinned by content. If the entry changes while that work is unfinished, the check fails until the work is re-read and re-pinned.
+- **Code map.** Each part in `architecture.md` names its paths. Mapped code that changes with no feature in progress is reported for the reconcile command; code no part maps and paths that match nothing are reported too.
+- **Rule checks.** An architecture rule may carry a command that exits non-zero when the rule is broken, and a Blocking flag. After implement, the review command checks the changed code against every rule and boundary and appends violations as tasks.
+- **Exact context.** The script prints only the entries a piece of work needs: capabilities by ID before specify; parts, rules, and the decisions governing the touched paths before plan, rejected options included.
+- **Existing code.** The recover command builds a first baseline from a partition of the tracked files; every proposed row names its evidence, and nothing is approved until the user says so.
+
 The commands, templates, hooks, and check script are shipped in [extension/](extension/). Install them from the target project root:
 
 ```sh

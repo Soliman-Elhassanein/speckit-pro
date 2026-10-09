@@ -16,19 +16,23 @@ Choices only. Exact versions live in the lockfiles.
 
 ## Parts and boundaries
 
-Each part, what it owns, and what it may depend on.
+Each part, what it owns, where its code lives, and what it may depend on. **Paths** are folders
+or globs, comma separated. The check script uses them to notice code that changed outside the
+process and code that no part maps.
 
-| Part | Owns | May depend on |
-|------|------|---------------|
-| [Name] | [Data, rule or responsibility it is the one authority for] | [Parts] |
+| Part | Owns | Paths | May depend on |
+|------|------|-------|---------------|
+| [Name] | [Data, rule or responsibility it is the one authority for] | [src/name] | [Parts] |
 
 ## Architecture rules
 
-Rules that every plan must follow.
+Rules that every plan and all code must follow. **Blocking** is `yes` or `no`: a broken blocking
+rule stops the work; any other becomes a refactor task. **Check** is optional: a command that
+exits non-zero when the rule is broken, such as the project's own lint or architecture test.
 
-| ID | Rule |
-|----|------|
-| AR-001 | [One sentence.] |
+| ID | Rule | Blocking | Check |
+|----|------|----------|-------|
+| AR-001 | [One sentence.] | no | - |
 
 ## Interfaces and contracts
 
