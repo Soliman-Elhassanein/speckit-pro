@@ -8,7 +8,7 @@ preset:
   author: "Soliman-Elhassanein"
 
 requires:
-  # Verified on specify-cli 0.13.3; needs a stock converge command and the wrap strategy.
+  # Verified on specify-cli 0.13.3 and 1.1.2; needs a stock converge command and the wrap strategy.
   speckit_version: ">=0.13.0"
 
 provides:

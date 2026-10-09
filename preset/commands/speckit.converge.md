@@ -13,6 +13,7 @@ These rules come from the Spec Kit Universal Adoption and Execution Profile. Whe
 - Assess the real interface where each promise is made. An isolated service test cannot certify a request, form, CLI, browser, or device workflow.
 - Audit previously completed tasks and tests by the same standard. Required evidence that is missing, stale, skipped, failed, NOT RUN, or BLOCKED is a gap.
 - Evidence is current only when it identifies the code and acceptance artifacts being assessed. Do not infer PASS from code inspection, an old log, or an earlier chat message. Identifying the assessed state (commit plus relevant working-tree fingerprint) is allowed; the stock "no git" rule means converge does not diff branches or history to find gaps.
+- When `.specify/memory/product.md`, `architecture.md` or `decisions.md` exist, they are intent too. Code or a plan that contradicts an approved capability, a product rule, an architecture rule or an accepted decision is a `contradicts` finding. Never edit those files here: append a task that asks the user to decide between changing the code and amending the baseline.
 - Audit reuse explicitly: duplicated authorization, validation, domain invariants, configuration, fixtures, and UI styling or interaction. An ignored suitable abstraction is a gap.
 - Required commands and evidence must be runnable and retained locally. External hosting, review, automation, synchronization, work-item, or artifact-upload services cannot gate convergence. Historical external results are evidence only for the state they tested.
 
