@@ -10,3 +10,6 @@ tmp/
 # Generated
 __pycache__/
 *.tmp
+
+# Test coverage
+.coverage*

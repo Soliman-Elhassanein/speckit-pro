@@ -22,7 +22,7 @@ A project that already has code will not pass the check on its first day. Before
 CHECK --mode advisory
 ```
 
-The check then reports without stopping work. When it runs clean, tell the user and offer `CHECK --mode blocking`.
+Recovery checks then report without stopping work; mandatory `--gate` checks still block, and invalid DONE evidence is never accepted. When it runs clean, tell the user and offer `CHECK --mode blocking`.
 
 ## Rule: no evidence, no claim
 
@@ -48,7 +48,7 @@ For each folder, read enough of it to say what it is. Draft:
 
 ### 3. Draft the product
 
-From the entry points, screens, routes, commands and tests, draft one capability row per promise the code keeps. Give every one the decision `proposed`. Where existing specs describe the behavior, name the owning spec; otherwise leave `-`.
+From the entry points, screens, routes, commands and tests, draft one capability row per promise the code keeps. Give every one the decision `proposed`. Ownership is calculated from existing specs; do not type an owning-spec cell.
 
 ### 4. Draft the decisions
 
@@ -63,7 +63,7 @@ Show the drafts grouped by file, each row with its evidence path. Ask the user t
 Run the baseline amend command with the confirmed rows. Then record the starting point:
 
 ```sh
-CHECK --write --stamp
+CHECK --write --stamp --base HEAD --reason "approved initial recovery"
 ```
 
 Report: folders mapped, folders left out and why, rows approved, rows still `proposed`, and open questions.

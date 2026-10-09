@@ -1,9 +1,7 @@
 name: tests
-
 on:
   push:
   pull_request:
-
 jobs:
   tests:
     runs-on: ubuntu-latest
@@ -12,21 +10,28 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Regression tests of the baseline check
-        run: python3 -m unittest discover -s tests -v
-      - name: Shell syntax
+      - name: Test and installer dependencies
+        run: python3 -m pip install pyyaml uv coverage==7.16.2
+      - name: Pinned Spec Kit CLI
+        run: uv tool install specify-cli --from "git+https://github.com/github/spec-kit.git@v$(cat SPECKIT_VERSION)"
+      - name: Regression and real installer tests
+        env:
+          SPECKIT_REAL_CLI: "1"
+        run: |
+          export SPECKIT_CHECKER_SOURCE="$PWD/extension/scripts"
+          coverage run --rcfile tests/coverage.ini -m unittest discover -s tests -v
+          coverage combine --rcfile tests/coverage.ini
+          coverage report --rcfile tests/coverage.ini
+          coverage report --rcfile tests/coverage.ini --include='*/baseline_check.py' --fail-under=95
+      - name: Shell syntax and manifests
         run: |
           sh -n install.sh
           sh -n scripts/build-template.sh
           sh -n preset/apply-converge.sh
           sh -n extension/scripts/install-git-hooks.sh
-      - name: YAML parses
-        run: |
-          pip install --quiet pyyaml
           python3 -c "import sys, yaml; [yaml.safe_load(open(f)) for f in sys.argv[1:]]" extension/extension.yml preset/preset.yml workflow/workflow.yml extension/ci/baseline.yml
-      - name: template/ matches its sources
+      - name: Full template rebuild is reproducible
         run: |
-          diff -r extension template/.specify/extensions/baseline
-          diff -r preset/commands template/.specify/presets/universal-profile/commands
-          diff -r preset/templates template/.specify/presets/universal-profile/templates
-          diff workflow/workflow.yml template/.specify/workflows/speckit-pro/workflow.yml
+          sh scripts/build-template.sh
+          git diff --exit-code -- template
+          test -z "$(git ls-files --others --exclude-standard template)"

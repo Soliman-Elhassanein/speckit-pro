@@ -1,21 +1,26 @@
-# Sample GitHub Actions workflow for a project that uses the baseline.
-# Copy it to .github/workflows/baseline.yml. It needs nothing but Python and git.
-#
-# Start with `continue-on-error: true` on the check step while the repository
-# is being cleaned up, then remove that line to make the check blocking.
+# Copy into the project and configure its runtime before the check when rules need it.
+# This YAML cannot configure GitHub branch protection: require this job in repository settings.
 name: baseline
-
 on:
   push:
   pull_request:
-
 jobs:
   baseline:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Baseline check
-        run: python3 .specify/extensions/baseline/scripts/baseline_check.py --strict
+      # Add the project's locked dependency/service setup here when rule checks require it.
+      - name: Required baseline gate (global, read-only)
+        env:
+          BASELINE_PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -n "$BASELINE_PR_BASE" ]; then
+            python3 .specify/extensions/baseline/scripts/baseline_check.py --gate --strict --base "$BASELINE_PR_BASE"
+          else
+            python3 .specify/extensions/baseline/scripts/baseline_check.py --gate --strict
+          fi

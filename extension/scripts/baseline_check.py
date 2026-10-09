@@ -1,29 +1,15 @@
 #!/usr/bin/env python3
-"""Deterministic check of the project baseline.
+"""Validate baseline intent, feature pins and evidence bound to current inputs.
 
-Reads .specify/memory/{product,architecture,decisions}.md and specs/. It keeps
-two kinds of generated state:
-
-  .specify/memory/baseline-state.json   the mode and the synced point of each part
-  specs/<feature>/baseline-pins.json    content pins of the baseline entries that
-                                        feature cites, and what it was verified on
-
-Modes (default is a read-only check):
-  --write             write the calculated cells: Delivery, Owning spec, part State
-  --repin [TARGET]    record current pins: a spec folder, one spec.md or plan.md, or all
-  --stamp [SPEC]      record the synced point of the parts in SPEC's plan, or of all parts
-  --strict            treat warnings as errors
-  --run-rule-checks   run the Check command of each architecture rule
-  --mode MODE         set `advisory` (report, exit 0) or `blocking` (the default)
-  --context           print the baseline entries for --ids and/or --paths
-  --touched SPEC      print the parts and rules touched since that spec's baseline
-  --scan              print a partition of tracked files, to recover a baseline
-  --commit-msg FILE   reject a commit message, author or committer that names a
-                      coding agent as a contributor (used by the commit-msg hook)
-
-In blocking mode nothing is written when the check reports an error, and the
-exit code is 1. In advisory mode errors are reported, the exit code is 0, and
-the calculated cells and generated state are still written.
+Default checks and --gate are read-only. --gate always blocks on errors, requires
+an adopted baseline/history base and runs executable architecture rules.
+--feature scopes feature diagnostics; global structure and history remain checked.
+--repin records reviewed citations; stale pins need --reason. --record-run executes
+planned gates and saves logs plus verification-run.json. --write accepts supported
+DONE evidence; --stamp records per-part reconciliation without renewing tests.
+Delivery, ownership and part state are calculated on read (--status/--json).
+Mutations use a checkout lock, input comparison and recoverable transaction journal.
+Advisory mode permits recovery diagnostics but never accepts invalid completion.
 """
 
 from __future__ import annotations
@@ -36,6 +22,10 @@ import os
 import re
 import subprocess
 import sys
+import time
+import uuid
+from datetime import datetime, timezone
+from baseline_store import contents, locked, recover, transact
 from pathlib import Path
 
 ID_RE = re.compile(r"\b(?:CAP|PR|AR|D|Q)-\d{3,}\b")
@@ -49,13 +39,13 @@ CITE_RE = re.compile(
 )
 SPEC_LABELS = ("implements", "changes", "product rules")
 PLAN_LABELS = ("architecture rules", "decisions")
-COMPLETION_RE = re.compile(r"^Completion:\s*(NOT DONE|DONE)\b", re.MULTILINE)
+COMPLETION_RE = re.compile(r"^Completion:\s*(NOT DONE|DONE|ABANDONED)\b", re.MULTILINE)
 OUTCOME_RE = re.compile(r"^Outcome:\s*`?(NOT RUN|[a-z_]+)", re.MULTILINE)
 TESTED_RE = re.compile(r"^Tested revision[^:\n]*:[ \t]*(\S.*)$", re.MULTILINE)
-PLACEHOLDER_RE = re.compile(r"<[A-Za-z][^<>\n]*>")
+PLACEHOLDER_RE = re.compile(r"<(?:actual[^<>\n]*|feature|IDs|TR|path|command|local evidence reference|covered|total|passing|met|complete|ID|outcome|change|method and status|run/fingerprint|run of[^<>\n]*|Missing[^<>\n]*|Retain prior[^<>\n]*|Actual assessment[^<>\n]*|locks/toolchain[^<>\n]*|browser/device[^<>\n]*|repository-owned path)>", re.IGNORECASE)
 CODE_SPAN_RE = re.compile(r"`[^`\n]*`")
 STATUSES = ("PASS", "FAIL", "NOT RUN", "BLOCKED")
-NOT_PASSED_RE = re.compile(r"^(?:NOT RUN|FAIL|BLOCKED|SKIP|XFAIL|ERROR)")
+NOT_PASSED_RE = re.compile(r"^(?:NOT RUN|FAIL|BLOCKED|SKIP|XFAIL|ERROR)", re.IGNORECASE)
 FAILED_COUNT_RE = re.compile(r"\b([1-9]\d*)\s+(?:failed|failures?|errors?)\b", re.IGNORECASE)
 FOUR_COUNTS_RE = re.compile(r"^\s*\d+\s*/\s*(\d+)\s*/\s*\d+\s*/\s*\d+\s*$")
 COUNT_RE = re.compile(r"^[^|\n]*:\s*(\d+)\s*/\s*(\d+)\s*$", re.MULTILINE)
@@ -139,14 +129,6 @@ def cells(line: str) -> list[str] | None:
     return parts
 
 
-def set_cell(line: str, column: int, value: str) -> str:
-    raw = split_row(line) or []
-    while len(raw) <= column:
-        raw.append(" ")
-    raw[column] = f" {value} "
-    return "|" + "|".join(raw) + "|"
-
-
 def table_rows(text: str) -> list[tuple[int, list[str], list[str]]]:
     """(line index, header cells, row cells) for every data row of every table."""
     rows = []
@@ -206,13 +188,7 @@ def row_hash(header: list[str], row: list[str]) -> str:
 
 
 def file_hash(path: Path) -> str:
-    return digest(path.read_text(encoding="utf-8")) if path.is_file() else ""
-
-
-def write_atomic(path: Path, text: str) -> None:
-    temporary = path.with_name(path.name + ".tmp")
-    temporary.write_text(text, encoding="utf-8")
-    os.replace(temporary, path)
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:16] if path.is_file() else ""
 
 
 class Baseline:
@@ -243,6 +219,9 @@ class Baseline:
             lines = text.splitlines()
             for index, header, row in table_rows(text):
                 if not row or row[0].startswith("["):
+                    continue
+                if len(row) != len(header):
+                    self.errors.append(f"{name}:{index + 1}: malformed row {row[0]}; escape pipes as \\| (expected {len(header)} cells, got {len(row)})")
                     continue
                 record = dict(zip(header, row))
                 if name == "architecture.md" and header[0] == "part":
@@ -382,7 +361,7 @@ def load_json(path: Path, errors: list[str], root: Path) -> dict:
             return state
     except (json.JSONDecodeError, UnicodeDecodeError):
         pass
-    errors.append(f"{path.relative_to(root)}: not valid JSON; restore it from version control, or delete it and repin")
+    errors.append(f"{path.relative_to(root)}: not valid JSON; restore it from version control; do not delete accepted evidence state")
     return {}
 
 
@@ -390,9 +369,15 @@ def dump_json(state: dict) -> str:
     return json.dumps(state, indent=2, sort_keys=True) + "\n"
 
 
+def git_paths(root: Path, *args: str) -> list[str] | None:
+    """NUL-separated paths preserve spaces, Unicode and rename metadata safely."""
+    result = subprocess.run(['git', '-C', str(root), *args], capture_output=True)
+    return [os.fsdecode(p) for p in result.stdout.split(b'\0') if p] if result.returncode == 0 else None
+
+
 def working_files(root: Path) -> list[str] | None:
     """Tracked and untracked files that exist, without ignored ones."""
-    listed = git(root, "ls-files", "-co", "--exclude-standard")
+    listed = git_paths(root, 'ls-files', '-z', '-co', '--exclude-standard')
     if listed is None:
         return None
     return sorted({name for name in listed if (root / name).is_file()})
@@ -401,8 +386,7 @@ def working_files(root: Path) -> list[str] | None:
 def part_hashes(root: Path, base: Baseline, files: list[str]) -> dict[str, str]:
     """One content hash per part, from the files it maps. It survives a squash or a rebase."""
     mapped = [name for name in files if base.parts_for([name])]
-    blobs = git(root, "hash-object", "--stdin-paths", stdin="\n".join(mapped) + "\n") if mapped else []
-    by_file = dict(zip(mapped, blobs or []))
+    by_file = {name: file_hash(root / name) for name in mapped}
     hashes = {}
     for part in base.parts:
         own = [name for name in mapped if any(path_matches(name, pattern) for pattern in part["paths"])]
@@ -558,16 +542,33 @@ def print_context(base: Baseline, ids: list[str], paths: list[str]) -> int:
         if contracts:
             print("## Interfaces and contracts")
             print(contracts)
-    return 1 if missing else 0
+            for link in LINK_RE.finditer(contracts):
+                target = link.group(1).split("#")[0]
+                if "://" in target:
+                    print(f"Contract omitted (external reference): {target}")
+                    continue
+                path = (base.memory / target).resolve()
+                if not path.is_relative_to(base.root):
+                    base.errors.append(f"contract is outside repository: {target}")
+                elif path.is_file():
+                    if path.stat().st_size > 65536:
+                        base.errors.append(f"contract exceeds 64 KiB context limit; load explicitly: {target}")
+                    else:
+                        print(f"### Contract {target}\n{path.read_text(encoding='utf-8')}")
+    for message in base.errors:
+        print(f"error: {message}")
+    if base.errors or missing:
+        print("Context is INCOMPLETE; resolve these errors before using it as authority")
+    return 1 if missing or base.errors else 0
 
 
 def changed_since(root: Path, commit: str) -> list[str] | None:
     """Tracked and untracked files that differ from a commit, including uncommitted work."""
-    committed = git(root, "diff", "--name-only", commit, "HEAD")
+    committed = git_paths(root, 'diff', '--name-only', '-z', commit)
     if committed is None:
         return None
-    pending = git(root, "status", "--porcelain", "--untracked-files=all") or []
-    return sorted(set(committed) | {line[3:].split(" -> ")[-1].strip('"') for line in pending})
+    pending = git_paths(root, 'ls-files', '--others', '--exclude-standard', '-z') or []
+    return sorted(set(committed) | set(pending))
 
 
 def print_touched(base: Baseline, spec: str) -> int:
@@ -619,409 +620,628 @@ def print_scan(root: Path) -> int:
 
 
 def head_version(root: Path, name: str) -> str | None:
+    top = git(root, 'rev-parse', '--show-toplevel')
+    if not top or Path(top[0]).resolve() != root:
+        return None
     lines = git(root, "show", f"HEAD:.specify/memory/{name}")
     return "\n".join(lines) if lines is not None else None
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--write", action="store_true", help="write the calculated cells")
-    parser.add_argument("--repin", nargs="?", const="*", default=None, metavar="TARGET", help="record pins for all specs, one folder, or one file")
-    parser.add_argument("--stamp", nargs="?", const="*", default=None, metavar="SPEC", help="record the synced point of all parts, or of one spec's parts")
-    parser.add_argument("--strict", action="store_true", help="treat warnings as errors")
-    parser.add_argument("--run-rule-checks", action="store_true", help="run each architecture rule's Check command")
-    parser.add_argument("--mode", choices=("advisory", "blocking"), help="set whether errors stop the work")
-    parser.add_argument("--context", action="store_true", help="print entries for --ids and/or --paths")
-    parser.add_argument("--ids", default="", help="comma separated baseline IDs")
-    parser.add_argument("--paths", default="", help="comma separated file or folder paths")
-    parser.add_argument("--touched", metavar="SPEC", help="print parts and rules touched since a spec's baseline")
-    parser.add_argument("--scan", action="store_true", help="print a partition of tracked files")
-    parser.add_argument("--commit-msg", type=Path, metavar="FILE", help="check one commit message for agent attribution")
-    parser.add_argument("--root", type=Path, default=None, help="repository root (default: nearest folder with .specify)")
-    args = parser.parse_args()
 
-    root = args.root or find_root(Path.cwd())
-    if args.commit_msg:
-        return check_commit_message(root or Path.cwd(), args.commit_msg)
-    if root is None or not (root / ".specify").is_dir():
-        print("error: no .specify folder found; run from inside a Spec Kit project", file=sys.stderr)
-        return 1
-    root = root.resolve()
-    if args.scan:
-        return print_scan(root)
+# v3 stores accepted evidence per feature. Shared baseline rows are never rewritten.
+RUN_FILE = 'verification-run.json'
+HEX = re.compile(r'^[0-9a-f]{16}$')
 
-    memory = root / ".specify" / "memory"
-    product_path = memory / "product.md"
-    if not product_path.is_file():
-        # A project that has not adopted the baseline is not blocked by it.
-        print("note: this project has no .specify/memory/product.md, so there is no baseline to check")
-        print("note: create one with the baseline amend command, or the baseline recover command when code exists")
-        return 0
 
+def state_schema(data: dict, kind: str) -> bool:
+    def hashes(value):
+        return isinstance(value, dict) and all(isinstance(k, str) and isinstance(v, str) and HEX.fullmatch(v) for k, v in value.items())
+    if not isinstance(data, dict) or data.get('version', 3) not in (2, 3):
+        return False
+    if kind == 'state':
+        stamp = data.get('stamp', {})
+        return (data.get('mode', 'blocking') in ('advisory', 'blocking')
+                and isinstance(data.get('accepted_base', ''), str)
+                and isinstance(stamp, dict) and hashes(stamp.get('parts', {})))
+    pins = data.get('pins', {})
+    if not isinstance(pins, dict) or not all(isinstance(k, str) and hashes(v) for k, v in pins.items()):
+        return False
+    if not isinstance(data.get('verified', {}), dict) or not isinstance(data.get('accepted', {}), dict):
+        return False
+    accepted = data.get('accepted', {})
+    if accepted and (not isinstance(accepted.get('run'), str) or not isinstance(accepted.get('inputs'), dict) or set(accepted['inputs']) != {'artifacts', 'baseline', 'code', 'contracts'} or any(not hashes(v) for v in accepted['inputs'].values())):
+        return False
+    transitions = data.get('transitions', {})
+    return (isinstance(transitions, dict) and all(isinstance(v, dict) for v in transitions.values())
+            and isinstance(data.get('review', {}), dict))
+
+
+def read_state(path: Path, errors: list[str], root: Path, kind: str = 'pins') -> dict:
+    data = load_json(path, errors, root)
+    if not state_schema(data, kind):
+        errors.append(f'{path.relative_to(root)}: invalid {kind} schema; restore state from version control')
+        return {}
+    return data
+
+
+def feature_dirs(root: Path) -> dict[str, Path]:
+    result = {}
+    specs = root / 'specs'
+    for path in sorted(specs.rglob('spec.md'), key=lambda p: (len(p.parts), str(p))) if specs.is_dir() else []:
+        if not any(parent in result.values() for parent in path.parent.parents):
+            result[path.parent.relative_to(specs).as_posix()] = path.parent
+    return result
+
+
+def citations(text: str) -> dict[str, str]:
+    return {label.lower(): value for label, value in CITE_RE.findall(text)}
+
+
+def input_binding(root: Path, base: Baseline, folder: Path) -> dict:
+    spec, plan = (folder / 'spec.md').read_text(), (folder / 'plan.md').read_text()
+    fields, design = citations(spec), citations(plan)
+    ids = set(ID_RE.findall(' '.join(fields.get(k, '') for k in SPEC_LABELS)))
+    ids.update(ID_RE.findall(' '.join(design.get(k, '') for k in PLAN_LABELS)))
+    # Global rules and product decisions govern every feature, even when a citation was omitted.
+    ids.update(base.of_kind('PR-')); ids.update(base.of_kind('AR-')); ids.update(base.product_decisions())
+    named = set(CAP_RE.findall(fields.get('implements', '') + fields.get('changes', '')))
+    ids.update(i for i, q in base.of_kind('Q-').items() if named & set(CAP_RE.findall(q['record'].get('blocks', ''))))
+    shared = re.search(r'^\*\*Verification inputs\*\*:(.*)$', base.text.get('architecture.md', ''), re.M)
+    parts = sorted(set(names_of(design.get('parts', ''))) | set(names_of(shared.group(1)) if shared else []))
+    entries = {i: base.pin_now(i) for i in sorted(ids)}
+    entries['stack'] = base.pin_now('stack')
+    constitution = base.memory / 'constitution.md'
+    if constitution.is_file(): entries['constitution'] = file_hash(constitution)
+    entries.update({f'part:{name}': base.pin_now(f'part:{name}') for name in parts})
+    code = part_hashes(root, base, working_files(root) or [])
+    tasks = (folder / 'tasks.md').read_text() if (folder / 'tasks.md').is_file() else ''
+    # Checkbox bookkeeping is excluded; changed task meaning is still a tested input.
+    tasks = re.sub(r'(^\s*[-*]\s+)\[[ xX]\]', r'\1[]', tasks, flags=re.MULTILINE)
+    contracts = {}
+    for link in LINK_RE.finditer(section(base.text.get('architecture.md', ''), 'Interfaces and contracts')):
+        target = link.group(1).split('#')[0]
+        path = (base.memory / target).resolve()
+        if '://' not in target and path.is_relative_to(root) and path.is_file():
+            contracts[path.relative_to(root).as_posix()] = file_hash(path)
+    return {'artifacts': {'spec.md': digest(spec), 'plan.md': digest(plan), 'tasks.md': digest(tasks)},
+            'baseline': entries, 'code': {n: code.get(n, digest('')) for n in parts}, 'contracts': contracts}
+
+
+def evidence_path(root: Path, folder: Path, value: str) -> Path | None:
+    link = LINK_RE.fullmatch(value.strip())
+    target = (link.group(1) if link else value).strip('` ').split('#')[0]
+    if not target or '://' in target or target.startswith('/'):
+        return None
+    for candidate in (folder / target, root / target):
+        path = candidate.resolve()
+        if path.is_relative_to(root) and path.is_file():
+            return path
+    return None
+
+
+def quality_gates(plan: str) -> list[dict]:
+    gates = []
+    for _, header, row in table_rows(section(plan, 'Quality gates')):
+        record = dict(zip(header, row))
+        if len(row) != len(header) or not all(record.get(k, '').strip('` ') for k in ('gate', 'working directory', 'exact command')):
+            raise ValueError('Quality gates needs nonempty Gate, Working directory and Exact command columns; escape pipes')
+        gates.append({k: record[k].strip('` ') for k in ('gate', 'working directory', 'exact command')})
+    if not gates:
+        raise ValueError('plan.md needs at least one complete Quality gates row')
+    return gates
+
+
+def run_evidence(root: Path, base: Baseline, folder: Path, writes: dict[Path, str]) -> dict:
+    from baseline_runtime import run
+    binding = input_binding(root, base, folder)
+    run_id = uuid.uuid4().hex
+    checks = []
+    for n, gate in enumerate(quality_gates((folder / 'plan.md').read_text())):
+        cwd = (root / gate['working directory']).resolve()
+        if not cwd.is_relative_to(root) or not cwd.is_dir():
+            raise ValueError('quality gate working directory must exist inside repository')
+        code, output = run(gate['exact command'], cwd, RULE_CHECK_TIMEOUT)
+        log = folder / 'evidence' / f'{run_id}-{n}.log'
+        writes[log] = output
+        checks.append({**gate, 'exit': code, 'evidence': log.relative_to(root).as_posix(), 'digest': digest(output)})
+    if input_binding(root, base, folder) != binding:
+        raise ValueError('test inputs changed during execution; no run was accepted')
+    result = {'version': 3, 'id': run_id, 'date': datetime.now(timezone.utc).isoformat(),
+              'inputs': binding, 'checks': checks, 'observations': []}
+    # Archive superseded machine records without relabeling their results.
+    old = folder / RUN_FILE
+    if old.exists():
+        writes[folder / 'evidence' / f'previous-{file_hash(old)}.json'] = old.read_text()
+    writes[old] = dump_json(result)
+    return result
+
+
+def validate_run(root: Path, base: Baseline, folder: Path, historical: bool = False) -> tuple[list[str], dict]:
+    gaps = []
+    path = folder / RUN_FILE
+    record = load_json(path, gaps, root)
+    if record.get('version') != 3 or not re.fullmatch(r'[0-9a-f]{32}', str(record.get('id', ''))):
+        return gaps + ['a v3 verification-run.json with a run ID is required; execute --record-run'], record
+    now = input_binding(root, base, folder)
+    inputs = record.get('inputs')
+    if not isinstance(inputs, dict) or set(inputs) != set(now) or any(not isinstance(inputs[k], dict) for k in now):
+        return gaps + ['verification-run.json has invalid input bindings'], record
+    compare = ('artifacts',) if historical else tuple(now)
+    for key in compare:
+        if inputs[key] != now[key]:
+            gaps.append(f'{key} changed after the feature was verified; execute new verification on current inputs')
+    checks = record.get('checks')
+    if not isinstance(checks, list) or not checks:
+        return gaps + ['run has no executable checks'], record
+    expected = quality_gates((folder / 'plan.md').read_text())
+    actual = []
+    for check in checks:
+        if not isinstance(check, dict) or not all(isinstance(check.get(k), str) and check[k] for k in ('gate', 'exact command', 'working directory', 'evidence', 'digest')):
+            gaps.append('run has missing command, directory or evidence fields'); continue
+        actual.append({k: check[k] for k in ('gate', 'working directory', 'exact command')})
+        evidence = evidence_path(root, folder, check['evidence'])
+        if evidence is None or file_hash(evidence) != check['digest']:
+            gaps.append('run evidence is missing or changed: ' + check['evidence'])
+        if type(check.get('exit')) is not int or check['exit'] != 0:
+            gaps.append('run command did not succeed: ' + check['exact command'])
+        if evidence:
+            output = evidence.read_text(errors='replace')
+            if re.search(r'\b[1-9]\d*\s+(failed|errors?|skipped|xfailed)\b', output, re.I):
+                gaps.append('required run reports failures/skips/xfails: ' + check['evidence'])
+    if actual != expected:
+        gaps.append('run does not match every planned quality gate')
+    report = folder / 'verification.md'
+    if report.is_file():
+        execution = table_rows(section(HISTORY_RE.split(report.read_text(), maxsplit=1)[0], 'Execution'))
+        if len(execution) != len(checks):
+            gaps.append('Execution must report every recorded gate exactly once')
+        for (_, header, row), check in zip(execution, checks):
+            data = dict(zip(header, row))
+            if not isinstance(check, dict) or not all(isinstance(check.get(k), str) for k in ('working directory', 'exact command', 'evidence')): continue
+            if any(data.get(k, '').strip('` ') != check.get(k) for k in ('working directory', 'exact command')) or evidence_path(root, folder, data.get('evidence', '')) != evidence_path(root, folder, check.get('evidence', '')):
+                gaps.append('Execution command, directory or log differs from recorded run')
+    observations = record.get('observations', [])
+    if not isinstance(observations, list):
+        gaps.append('observations must be a list')
+    else:
+        for obs in observations:
+            if not isinstance(obs, dict) or not all(isinstance(obs.get(k), str) and obs[k] for k in ('method', 'platform', 'expected', 'observed', 'evidence', 'digest')) or obs.get('status') != 'PASS' or evidence_path(root, folder, obs.get('evidence', '')) is None:
+                gaps.append('manual observation needs method, platform, expected/observed, PASS and local evidence')
+            elif file_hash(evidence_path(root, folder, obs['evidence'])) != obs['digest']:
+                gaps.append('manual observation evidence changed')
+        manual = table_rows(section(report.read_text(), 'Additional acceptance evidence')) if report.is_file() else []
+        if len(manual) != len(observations):
+            gaps.append('acceptance report must match the recorded manual observations')
+        for (_, header, row), obs in zip(manual, observations):
+            data = dict(zip(header, row))
+            if not isinstance(obs, dict): continue
+            if any(data.get(k) != obs.get(k) for k in ('expected', 'observed')):
+                gaps.append('acceptance expected/observed differs from recorded observation')
+    return gaps, record
+
+
+def complete_gaps(folder: Path, root: Path) -> list[str]:
+    gaps = done_gaps(folder, root)
+    plan = folder / 'plan.md'
+    if plan.is_file():
+        try:
+            quality_gates(plan.read_text())
+        except ValueError as exc:
+            gaps.append(str(exc))
+        if not section(plan.read_text(), 'Verification plan').strip():
+            gaps.append('plan.md needs a Verification plan')
+    current = HISTORY_RE.split((folder / 'verification.md').read_text(), maxsplit=1)[0]
+    for _, header, row in table_rows(current):
+        if len(row) != len(header):
+            gaps.append('malformed evidence table; escape pipes'); continue
+        for n, name in enumerate(header):
+            if 'status' in name and row[n].strip('`* ').split(' / ')[0] not in STATUSES:
+                gaps.append(f'unknown status {row[n]!r}; use PASS, FAIL, NOT RUN or BLOCKED')
+    for _, header, row in table_rows(section(current, 'Execution')):
+        data = dict(zip(header, row))
+        for name in ('working directory', 'exact command', 'evidence'):
+            if not data.get(name, '').strip('` '):
+                gaps.append(f'Execution requires nonempty {name}')
+        if evidence_path(root, folder, data.get('evidence', '')) is None:
+            gaps.append('Execution evidence must reference an existing repository file')
+        counts = data.get('passed / failed / skipped / xfailed', '')
+        four = re.fullmatch(r'\s*(\d+)\s*/\s*(\d+)\s*/\s*(\d+)\s*/\s*(\d+)\s*', counts)
+        if not four:
+            gaps.append('Execution requires numeric passed / failed / skipped / xfailed counts')
+        if (four and any(int(four[n]) for n in (2, 3, 4))) or re.search(r'\b[1-9]\d*\s+(skipped|xfailed)\b', counts, re.I):
+            gaps.append('required skipped/xfailing tests block DONE, even with a reason')
+    for _, header, row in table_rows(section(current, 'Additional acceptance evidence')):
+        data = dict(zip(header, row))
+        if not all(data.get(k, '').strip() for k in ('as / sc', 'method and platform', 'expected', 'observed', 'status / evidence')):
+            gaps.append('acceptance observations need nonempty ID, method/platform, expected, observed and status/evidence')
+        link = LINK_RE.search(data.get('status / evidence', ''))
+        if not link or evidence_path(root, folder, link.group(0)) is None:
+            gaps.append('acceptance observation needs existing local evidence')
+    return gaps
+
+
+def check_project(args, root: Path, local: Path) -> int:
     base = Baseline(root)
-    if args.context:
-        split = lambda value: [item.strip() for item in value.split(",") if item.strip()]  # noqa: E731
-        return print_context(base, split(args.ids), split(args.paths))
+    errors, warnings, notes = base.errors, [], []
+    writes = {}
+    initial_files = working_files(root)
+    snapshot = {root / n: contents(root / n) for n in (initial_files or [])}
+    state_path = base.memory / STATE_FILE
+    before_state_errors = len(errors)
+    state = read_state(state_path, errors, root, 'state')
+    state_valid = len(errors) == before_state_errors
+    # Policy preferences can be initialized before any baseline exists.
+    if args.mode and state_valid:
+        state['mode'] = args.mode
+    advisory = state.get('mode') == 'advisory' and not args.gate
+    if not (base.memory / 'product.md').is_file():
+        adopted = state.get('adopted') or any((root / 'specs').rglob(PINS_FILE)) or head_version(root, 'product.md') is not None
+        if args.gate or adopted:
+            errors.append('required/adopted product.md is missing; restore the baseline')
+        else:
+            errors[:] = [e for e in errors if e not in ('product.md: file is missing', 'architecture.md: file is missing', 'decisions.md: file is missing')]
+            notes.append('no baseline to check (non-adopter discovery)')
+        if args.mode and not errors:
+            state.update(version=3)
+            transact(root, local, {state_path: dump_json(state)}, snapshot)
+        for m in notes: print('note: ' + m)
+        for m in errors: print('error: ' + m)
+        return int(bool(errors))
     if args.touched:
         return print_touched(base, args.touched)
 
-    errors, warnings, notes = base.errors, base.warnings, base.notes
-    writes: dict[Path, str] = {}  # applied only when the check reports no error
-    state = load_json(memory / STATE_FILE, errors, root)
-    state_before = dump_json(state)
-    if args.mode:
-        state["mode"] = args.mode
-    advisory = state.get("mode") == "advisory"
-    old_stamp = state.get("stamp")
-    stamp = old_stamp if isinstance(old_stamp, dict) else {"commit": old_stamp or "", "parts": {}}
-    legacy_pins = state.pop("pins", None) or {}  # the first version kept every pin in the state file
-    capabilities = base.of_kind("CAP-")
-    questions = base.open_questions()
-
-    # Which spec, plan or folder --repin and --stamp name.
-    specs_root = root / "specs"
-    spec_dirs = sorted(p.parent for p in specs_root.rglob("spec.md")) if specs_root.is_dir() else []
-    keys = {spec_dir.relative_to(specs_root).as_posix(): spec_dir for spec_dir in spec_dirs}
-    repin_key = repin_doc = ""
-    if args.repin not in (None, "*"):
-        repin_key = spec_key(args.repin)
-        repin_doc = Path(args.repin.rstrip("/")).name if args.repin.rstrip("/").endswith(".md") else ""
-        if repin_key not in keys:
-            errors.append(f"--repin {args.repin}: there is no specs/{repin_key}/spec.md")
-    stamp_key = spec_key(args.stamp) if args.stamp not in (None, "*") else ""
-    if stamp_key and stamp_key not in keys:
-        errors.append(f"--stamp {args.stamp}: there is no specs/{stamp_key}/spec.md")
-
-    # Each spec: what it implements and changes, what it cites, whether the cited rows moved, and whether it is done.
-    implements: dict[str, set[str]] = {}
-    changes: dict[str, set[str]] = {}
-    done_specs: set[str] = set()
-    expected_parts: set[str] = set()  # parts an unfinished feature says it is working in
-    plan_parts: dict[str, list[str]] = {}
-    for key, spec_dir in keys.items():
-        where = f"specs/{key}"
-        spec_text = (spec_dir / "spec.md").read_text(encoding="utf-8")
-        cites = {label.lower(): rest for label, rest in CITE_RE.findall(spec_text)}
-        implements[key] = set(CAP_RE.findall(cites.get("implements", "")))
-        changes[key] = set(CAP_RE.findall(cites.get("changes", "")))
-        plan_path = spec_dir / "plan.md"
-        plan_text = plan_path.read_text(encoding="utf-8") if plan_path.is_file() else ""
-        plan_cites = {label.lower(): rest for label, rest in CITE_RE.findall(plan_text)}
-        plan_parts[key] = names_of(plan_cites.get("parts", ""))
-
-        pins_path = spec_dir / PINS_FILE
-        record = load_json(pins_path, errors, root)
-        record_before = pins_path.read_text(encoding="utf-8") if pins_path.is_file() else ""
-        pins: dict[str, dict[str, str]] = record.setdefault("pins", {})
-        for doc in ("spec.md", "plan.md"):
-            if doc not in pins and f"{where}/{doc}" in legacy_pins:
-                pins[doc] = legacy_pins[f"{where}/{doc}"]
-
-        # Done is a claim in verification.md that the rest of the feature's records must support.
-        verification = spec_dir / "verification.md"
-        completion = COMPLETION_RE.search(verification.read_text(encoding="utf-8")) if verification.is_file() else None
-        done = bool(completion and completion.group(1) == "DONE")
-        if done:
-            gaps = done_gaps(spec_dir, root)
-            if gaps:
-                errors.append(f"{where}/verification.md: says Completion: DONE, but " + "; ".join(gaps))
-                done = False
-        if done:
-            now = {doc: file_hash(spec_dir / doc) for doc in ("spec.md", "plan.md", "verification.md")}
-            was = record.get("verified", {})
-            moved = [doc for doc in ("spec.md", "plan.md") if was and was.get(doc) != now[doc]]
-            if moved and was.get("verification.md") == now["verification.md"]:
-                errors.append(
-                    f"{where}: {' and '.join(moved)} changed after the feature was verified, and verification.md did not; "
-                    "verify again on the changed requirements and record the run"
-                )
-                done = False
-            else:
-                record["verified"] = now
+    keys = feature_dirs(root)
+    target = ''
+    if args.feature:
+        if args.feature == 'current':
+            pointer = load_json(root / '.specify' / 'feature.json', errors, root)
+            target = spec_key(str(pointer.get('feature_directory', '')))
         else:
-            record.pop("verified", None)
-        if done:
-            done_specs.add(key)
-        else:
-            expected_parts.update(plan_parts[key])
-
-        named = implements[key] | changes[key]
-        if not named:
-            (warnings if done else errors).append(
-                f"{where}/spec.md: no `**Implements**: CAP-NNN` or `**Changes**: CAP-NNN` line naming a capability"
-            )
-        for ident in sorted(named):
-            entry = capabilities.get(ident)
-            # Finished work stays valid after its capability is retired or superseded, never before approval.
-            decision = entry["record"].get("decision", "").lower() if entry else "approved"
-            if decision == "proposed" or (not done and decision != "approved"):
-                errors.append(f"{where}/spec.md: names {ident}, which is not approved")
-            for question, q_entry in questions.items():
-                if not done and ident in CAP_RE.findall(q_entry["record"].get("blocks", "")):
-                    errors.append(
-                        f"{where}/spec.md: {ident} is blocked by open question {question}; "
-                        "answer it through the baseline amend command first"
-                    )
-
-        for doc, text, labels in (("spec.md", spec_text, SPEC_LABELS), ("plan.md", plan_text, PLAN_LABELS)):
-            if not text:
-                continue
-            doc_cites = cites if doc == "spec.md" else plan_cites
-            cited = sorted(set(ID_RE.findall(" ".join(doc_cites.get(label, "") for label in labels))))
-            if doc == "plan.md":
-                cited += [f"part:{name}" for name in plan_parts[key]] + ["stack"]
-            repin_this = args.repin is not None and (args.repin == "*" or (repin_key == key and repin_doc in ("", doc)))
-            doc_pins = pins.setdefault(doc, {})
+            target = spec_key(args.feature)
+        if not target or target not in keys:
+            errors.append('--feature must identify an existing feature (current reads .specify/feature.json)')
+    repin_key = spec_key(args.repin) if args.repin not in (None, '*') else ''
+    repin_doc = Path(args.repin.rstrip('/')).name if args.repin and args.repin.rstrip('/').endswith('.md') else ''
+    if repin_key and repin_key not in keys:
+        errors.append(f'--repin: no specs/{repin_key}/spec.md')
+    if repin_doc and repin_doc not in ('spec.md', 'plan.md'):
+        errors.append('--repin targets only spec.md or plan.md')
+    recorded_result = None
+    records, features, ferrors, fwarnings = {}, {}, {}, {}
+    owners, changers = {}, {}
+    capabilities = base.of_kind('CAP-')
+    common_parts = re.search(r'^\*\*Verification inputs\*\*:(.*)$', base.text.get('architecture.md', ''), re.M)
+    for name in names_of(common_parts.group(1)) if common_parts else []:
+        if base.part(name) is None: errors.append(f'undefined shared Verification inputs part: {name}')
+    for key, folder in keys.items():
+        fe, fw = [], []
+        ferrors[key], fwarnings[key] = fe, fw
+        path = folder / PINS_FILE
+        record = read_state(path, fe, root)
+        records[key] = record
+        snapshot.setdefault(path, contents(path))
+        spec = (folder / 'spec.md').read_text()
+        plan = (folder / 'plan.md').read_text() if (folder / 'plan.md').is_file() else ''
+        cs, cp = citations(spec), citations(plan)
+        named = set(CAP_RE.findall(cs.get('implements', '') + cs.get('changes', '')))
+        completion_path = folder / 'verification.md'
+        text = completion_path.read_text() if completion_path.is_file() else ''
+        match = COMPLETION_RE.search(text)
+        claim = match.group(1) if match else 'NOT DONE'
+        features[key] = {'folder': folder, 'spec': spec, 'plan': plan, 'named': named,
+                         'parts': names_of(cp.get('parts', '')), 'claim': claim, 'done': False,
+                         'changes': set(CAP_RE.findall(cs.get('changes', '')))}
+        for ident in CAP_RE.findall(cs.get('implements', '')): owners.setdefault(ident, []).append(key)
+        for ident in CAP_RE.findall(cs.get('changes', '')): changers.setdefault(ident, []).append(key)
+        if not named: fe.append('spec.md has no **Implements**: or **Changes**: capability')
+        for ident in named:
+            if ident not in capabilities: fe.append(f'spec.md: cites {ident}, which is not defined')
+        pins = record.setdefault('pins', {})
+        for doc, document, labels in (('spec.md', spec, SPEC_LABELS), ('plan.md', plan, PLAN_LABELS)):
+            if not document: continue
+            refs = citations(document)
+            cited = sorted(set(ID_RE.findall(' '.join(refs.get(k, '') for k in labels))))
+            if doc == 'plan.md': cited += ['stack'] + [f'part:{n}' for n in features[key]['parts']]
+            dp = pins.setdefault(doc, {})
+            repinning = args.repin is not None and (args.repin == '*' or (key == repin_key and repin_doc in ('', doc)))
             for ident in cited:
-                now_hash = base.pin_now(ident)
-                if now_hash is None:
-                    what = f"part '{ident[5:]}'" if ident.startswith("part:") else ident
-                    errors.append(f"{where}/{doc}: cites {what}, which is not defined in the baseline")
-                    continue
-                if ident.startswith("D-") and not done and base.status(ident).lower() != "accepted":
-                    errors.append(f"{where}/{doc}: cites {ident}, whose status is '{base.status(ident) or 'empty'}'")
-                pinned = doc_pins.get(ident)
-                if repin_this:
-                    if pinned != now_hash:
-                        print(f"pinned {ident} for {where}/{doc}" + (" (it had changed)" if pinned else ""))
-                        doc_pins[ident] = now_hash
-                elif pinned is None:
-                    if not done:
-                        warnings.append(f"{where}/{doc}: {ident} is not pinned; run with --repin specs/{key}/{doc}")
-                elif pinned != now_hash:
-                    if not done:
-                        errors.append(
-                            f"{where}/{doc}: {ident} changed in the baseline after this file was written; "
-                            f"re-read it, update the file if needed, then run with --repin specs/{key}/{doc}"
-                        )
-                    elif ident.startswith("CAP-") and capabilities[ident]["record"].get("decision", "").lower() == "approved":
-                        errors.append(
-                            f"{where}/{doc}: {ident} changed after this feature was verified against it; "
-                            f"add a spec that Changes {ident}, or verify again and run with --repin specs/{key}/{doc}"
-                        )
-            if repin_this:
-                for ident in [i for i in doc_pins if i not in cited]:
-                    del doc_pins[ident]
-        for doc in [d for d in pins if not pins[d]]:
-            del pins[doc]
-        if pins or record.get("verified"):
-            if dump_json(record) != record_before:
-                writes[pins_path] = dump_json(record)
+                now = base.pin_now(ident)
+                if now is None:
+                    fe.append(f'{doc}: cites {ident}, which is not defined in the baseline'); continue
+                if repinning:
+                    if dp.get(ident) != now and dp.get(ident) and not args.reason:
+                        fe.append(f'{doc}: acknowledging stale {ident} requires --reason')
+                    else: dp[ident] = now
+                elif ident not in dp:
+                    (fe if claim == 'DONE' else fw).append(f'{doc}: {ident} is not pinned; run --repin specs/{key}/{doc}')
+                elif dp[ident] != now and claim not in ('DONE', 'ABANDONED') and not args.structural:
+                    fe.append(f'{doc}: {ident} changed in the baseline; re-read and --repin specs/{key}/{doc} --reason ...')
+            if repinning:
+                pins[doc] = {i: dp[i] for i in cited if i in dp}
+                record['pin_review'] = {'reason': args.reason or 'initial pins', 'date': datetime.now(timezone.utc).isoformat()}
+        # Downstream review acknowledges the current spec explicitly, separately from execution.
+        review = record.get('review', {})
+        current_spec = digest(spec)
+        if review and review.get('spec') != current_spec and not args.structural:
+            if args.acknowledge and (target == key or repin_key == key) and args.reason:
+                record['review'] = {'spec': current_spec, 'reason': args.reason}
+            else:
+                fe.append('spec.md changed: plan/tasks need review; use --feature ... --acknowledge --reason after updating them')
+        elif not review and args.repin is not None and (args.repin == '*' or repin_key == key):
+            record['review'] = {'spec': current_spec, 'reason': args.reason or 'initial planning'}
+        if claim == 'ABANDONED': notes.append(f'specs/{key}: abandoned; no drift exemption')
 
-    # Capabilities: decision state, owning spec, and Delivery calculated from evidence.
-    product_lines = base.text["product.md"].splitlines()
-    product_changed = False
-    delivery_now: dict[str, str] = {}
+    # Freeze each change's predecessor and capability revisions at initial spec repin.
+    historical = set()
+    edges = {}
+    for ident, list_of_changes in changers.items():
+        original = owners.get(ident, [])
+        if len(original) != 1:
+            errors.append(f'{ident}: a Changes spec requires exactly one implementing owner'); continue
+        for key in list_of_changes:
+            record = records[key]
+            transition = record.setdefault('transitions', {}).get(ident)
+            if transition is None and args.repin is not None and (args.repin == '*' or repin_key == key):
+                requested = re.search(r'^\*\*Previous change\*\*:\s*(.+)$', features[key]['spec'], re.M)
+                predecessor = spec_key(requested.group(1)) if requested else original[0]
+                if predecessor not in features or ident not in features[predecessor]['named'] or predecessor == key:
+                    ferrors[key].append(f'{ident}: invalid Previous change'); continue
+                accepted = records[predecessor].get('accepted', {})
+                previous = accepted.get('inputs', {}).get('baseline', {}).get(ident)
+                if not previous:
+                    ferrors[key].append(f'{ident}: predecessor needs accepted evidence before preparing a change'); continue
+                transition = {'predecessor': predecessor, 'from': previous, 'to': base.pin_now(ident)}
+                record['transitions'][ident] = transition
+            if not isinstance(transition, dict) or not all(isinstance(transition.get(k), str) for k in ('predecessor', 'from', 'to')):
+                ferrors[key].append(f'{ident}: missing revision transition; repin the new spec'); continue
+            pred = transition['predecessor']
+            if pred not in features or ident not in features[pred]['named'] or pred == key:
+                ferrors[key].append(f'{ident}: invalid transition predecessor'); continue
+            old = records[pred].get('accepted', {}).get('inputs', {}).get('baseline', {}).get(ident)
+            if old != transition['from'] or not HEX.fullmatch(transition['from']) or not HEX.fullmatch(transition['to']):
+                ferrors[key].append(f'{ident}: transition does not match accepted predecessor revision'); continue
+            edge = (ident, pred)
+            if edge in edges:
+                errors.append(f'{ident}: conflicting change branches {edges[edge]} and {key}; resolve the transition')
+            edges[edge] = key
+        # Only a chain rooted in the actual owner can supersede its evidence.
+        cursor, seen = original[0], set()
+        while (ident, cursor) in edges:
+            if cursor in seen:
+                errors.append(f'{ident}: change transition cycle'); break
+            seen.add(cursor)
+            successor = edges[(ident, cursor)]
+            if features[successor]['claim'] != 'ABANDONED' and records[successor]['transitions'][ident]['to'] == base.pin_now(ident):
+                historical.update((k, ident) for k in seen if records[k].get('accepted'))
+            cursor = successor
+
+    for key, feature in features.items():
+        folder, fe = feature['folder'], ferrors[key]
+        record = records[key]
+        accepted = record.get('accepted', {})
+        is_historical = bool(accepted) and bool(feature['named']) and all((key, i) in historical or capabilities.get(i, {}).get('record', {}).get('decision') in ('retired', 'superseded') for i in feature['named'])
+        for ident in feature['named']:
+            entry = capabilities.get(ident)
+            if not entry: continue
+            if entry['record'].get('decision') != 'approved' and not is_historical:
+                fe.append(f'{ident} is not approved')
+            if not is_historical:
+                for q, question in base.open_questions().items():
+                    if ident in CAP_RE.findall(question['record'].get('blocks', '')):
+                        fe.append(f'{ident} is blocked by open question {q}')
+        for ident in ID_RE.findall(citations(feature['plan']).get('decisions', '')):
+            if ident in base.entries and base.status(ident) != 'accepted' and not is_historical:
+                fe.append(f'plan.md: cites {ident}, whose status is {base.status(ident)!r}')
+        if args.record_run and key == target and not errors and not fe:
+            if args.dry_run:
+                notes.extend('would execute ' + g['exact command'] for g in quality_gates(feature['plan']))
+            else:
+                recorded_result = run_evidence(root, base, folder, writes)
+        if feature['claim'] == 'DONE' and not args.structural and not (args.record_run and key == target):
+            fe.extend(complete_gaps(folder, root))
+            if not (folder / PINS_FILE).is_file(): fe.append('completed pins are missing; restore them before accepting evidence')
+            if (folder / 'plan.md').is_file():
+                run_gaps, run_record = validate_run(root, base, folder, is_historical)
+                fe.extend(run_gaps)
+                if is_historical and (accepted.get('run') != run_record.get('id') or accepted.get('inputs') != run_record.get('inputs')):
+                    fe.append('historical run differs from accepted evidence; restore the original record')
+                # First/renewed acceptance must satisfy current policy (above).
+                if not fe:
+                    feature['done'] = True
+                    if args.write and not is_historical:
+                        record['accepted'] = {'run': run_record['id'], 'inputs': run_record['inputs']}
+        if args.require_done and (not target or key == target) and not feature['done'] and feature['claim'] != 'ABANDONED':
+            fe.append('final gate requires supported DONE with current evidence')
+        if feature['claim'] == 'NOT DONE' and not args.structural:
+            latest = git(root, 'log', '-1', '--format=%ct', '--', str(folder.relative_to(root)))
+            last = int(latest[0]) if latest else max(p.stat().st_mtime for p in folder.glob('*.md'))
+            if time.time() - last > args.inactive_days * 86400:
+                fwarnings[key].append(f'unfinished feature inactive for {args.inactive_days} days; review or mark ABANDONED')
+
+    status = {'capabilities': {}, 'parts': {}}
     for ident, entry in capabilities.items():
-        record, header = entry["record"], entry["header"]
-        where = f"product.md:{entry['line'] + 1}"
-        decision = record.get("decision", "").lower()
-        if decision not in DECISION_STATES:
-            errors.append(f"{where}: {ident} has decision '{decision}'; use one of {sorted(DECISION_STATES)}")
-        if "owning spec" not in header or "delivery" not in header:
-            errors.append(f"{where}: the capabilities table needs the Owning spec and Delivery columns")
-            continue
-        owners = sorted(key for key, named in implements.items() if ident in named)
-        changers = sorted(key for key, named in changes.items() if ident in named)
-        if len(owners) > 1:
-            errors.append(
-                f"{where}: {ident} is implemented by {', '.join('specs/' + o for o in owners)}; "
-                "one spec implements a capability, and a later spec lists it under `**Changes**:`"
-            )
-        if changers and not owners:
-            errors.append(f"{where}: specs/{changers[0]} changes {ident}, but no spec implements it yet")
-        cell_owner = spec_key(record.get("owning spec", ""))
-        owner = owners[0] if len(owners) == 1 else ""
-        if cell_owner and cell_owner != owner and len(owners) < 2:
-            errors.append(
-                f"{where}: {ident} names owning spec 'specs/{cell_owner}', "
-                + (f"but specs/{owner} implements it" if owner else "whose spec.md does not list it under Implements")
-            )
-        elif owner and not cell_owner:
-            if args.write:
-                product_lines[entry["line"]] = set_cell(product_lines[entry["line"]], header.index("owning spec"), f"specs/{owner}")
-                product_changed = True
-                print(f"updated {ident}: Owning spec -> specs/{owner}")
-            else:
-                notes.append(f"{where}: {ident} is implemented by specs/{owner}; run with --write to record its owning spec")
-        involved = owners + changers
-        delivery = "unstarted" if not owners else "verified" if all(k in done_specs for k in involved) else "in progress"
-        delivery_now[ident] = delivery
-        current = record.get("delivery", "").lower()
-        if current != delivery:
-            if args.write:
-                product_lines[entry["line"]] = set_cell(product_lines[entry["line"]], header.index("delivery"), delivery)
-                product_changed = True
-                print(f"updated {ident}: Delivery '{current}' -> '{delivery}'")
-            elif current == "verified":
-                errors.append(f"{where}: {ident} shows Delivery 'verified', but the evidence says '{delivery}'; run with --write")
-            else:
-                notes.append(f"{where}: {ident} shows Delivery '{current}', the evidence says '{delivery}'; run with --write")
-    if product_changed:
-        writes[product_path] = "\n".join(product_lines) + "\n"
-
-    # Dependencies between capabilities.
-    depends = {i: CAP_RE.findall(e["record"].get("depends on", "")) for i, e in capabilities.items()}
-    for ident, needed in depends.items():
+        if entry['record'].get('decision') not in DECISION_STATES: errors.append(f'{ident}: invalid decision state')
+        own = owners.get(ident, [])
+        if len(own) > 1: errors.append(f'{ident}: multiple owners; a later spec lists it under `**Changes**:`')
+        involved = own + [k for k in changers.get(ident, []) if features[k]['claim'] != 'ABANDONED']
+        valid = bool(own) and all(features[k]['done'] and not ferrors[k] for k in involved)
+        status['capabilities'][ident] = {'owner': 'specs/' + own[0] if len(own) == 1 else '',
+                                         'delivery': 'verified' if valid else 'in progress' if own else 'unstarted'}
+    dependencies = {i: CAP_RE.findall(e['record'].get('depends on', '')) for i, e in capabilities.items()}
+    for ident, needed in dependencies.items():
         for other in needed:
-            if other not in capabilities:
-                errors.append(f"product.md: {ident} depends on {other}, which is not defined")
-            elif delivery_now.get(ident) == "in progress" and delivery_now.get(other) != "verified":
-                warnings.append(f"product.md: {ident} is in progress and depends on {other}, whose Delivery is '{delivery_now.get(other)}'")
-        seen: set[str] = set()
-        queue = list(needed)
+            if other not in capabilities: errors.append(f'{ident}: undefined dependency {other}')
+            elif status['capabilities'][ident]['delivery'] == 'in progress' and status['capabilities'][other]['delivery'] != 'verified':
+                warnings.append(f'{ident} depends on unverified {other}')
+        queue, seen = list(needed), set()
         while queue:
             other = queue.pop()
-            if other == ident:
-                errors.append(f"product.md: {ident} depends on itself through a cycle")
-                break
-            if other not in seen:
-                seen.add(other)
-                queue.extend(depends.get(other, []))
+            if other == ident: errors.append(f'{ident} depends on itself through a cycle'); break
+            if other not in seen: seen.add(other); queue.extend(dependencies.get(other, []))
+    for ident, entry in base.of_kind('D-').items():
+        if entry['record'].get('status') not in ('accepted', 'rejected') and not re.fullmatch(r'superseded by D-\d{3,}', entry['record'].get('status', '')):
+            errors.append(f'{ident}: invalid decision status')
 
-    # Rows are never deleted, and a decision is never rewritten: compare with the last commit.
-    for name in base.text:
-        before = head_version(root, name)
-        if before is None:
-            continue
-        old_rows = {row[0]: (header, row) for _, header, row in table_rows(before) if row and DEFINED_RE.match(row[0])}
-        for ident in sorted(set(old_rows) - set(base.entries)):
-            errors.append(f"{name}: {ident} was deleted; rows are never deleted, so restore it and change its state instead")
-        if name == "decisions.md":
-            for ident, (header, row) in old_rows.items():
-                entry = base.entries.get(ident)
-                keep = lambda h, r: [c for n, c in zip(h, r) if n != "status"]  # noqa: E731
-                if entry and keep(header, row) != keep(entry["header"], entry["row"]):
-                    warnings.append(f"{name}: {ident} was rewritten; a changed decision gets a new row that supersedes the old one")
+    # Accepted history, not every proposal ever present in any commit.
+    comparison = args.base or state.get('accepted_base')
+    if comparison:
+        resolved = git(root, 'rev-parse', '--verify', comparison + '^{commit}')
+        if not resolved: errors.append(f'accepted history base unavailable: {comparison}; fetch history or provide --base')
+    elif args.gate:
+        errors.append('required gate needs --base or an adopted accepted_base; initialize with --write --base HEAD')
+    for revision in dict.fromkeys(r for r in (comparison, 'HEAD') if r):
+        for name in BASELINE_FILES:
+            lines = git(root, 'show', f'{revision}:.specify/memory/{name}')
+            if lines is None: continue
+            old_rows = {r[0]: (h, r) for _, h, r in table_rows('\n'.join(lines)) if r and DEFINED_RE.match(r[0])}
+            for ident in set(old_rows) - set(base.entries): errors.append(f'{name}: {ident} was deleted against {revision}; restore or retire it')
+            if name == 'decisions.md':
+                for ident, (header, row) in old_rows.items():
+                    current = base.entries.get(ident)
+                    keep = lambda h, r: [c for n, c in zip(h, r) if n != 'status']
+                    if current and keep(header, row) != keep(current['header'], current['row']):
+                        errors.append(f'{name}: {ident} was rewritten; create a new superseding decision')
 
-    # Code against the map: part state, unmapped code, and changes made outside the process.
     files = working_files(root)
-    arch_text = base.text.get("architecture.md", "")
-    arch_lines = arch_text.splitlines()
-    arch_changed = False
-    mapped = [part for part in base.parts if part["paths"]]
-    if files is None:
-        notes.append("not a git repository: code drift is not checked")
-    elif not mapped:
-        if any(base.is_code(name) for name in files):
-            warnings.append("architecture.md maps no part to a path, so code drift cannot be checked; add Paths to the parts table")
-    else:
-        code = [name for name in files if base.is_code(name)]
-        for part in mapped:
-            built = any(path_matches(name, pattern) for name in code for pattern in part["paths"])
-            calculated = "built" if built else "planned"
-            if "state" not in part["header"]:
-                if not built:
-                    notes.append(f"architecture.md: part '{part['name']}' has no code yet; add a State column to the parts table to track it")
-                continue
-            current = part["record"].get("state", "").lower()
-            if current == calculated:
-                continue
-            if current == "built":
-                errors.append(
-                    f"architecture.md: part '{part['name']}' is built, but its paths match no file any more; "
-                    "run the baseline reconcile command"
-                )
-            elif args.write:
-                arch_lines[part["line"]] = set_cell(arch_lines[part["line"]], part["header"].index("state"), calculated)
-                arch_changed = True
-                print(f"updated part '{part['name']}': State '{current}' -> '{calculated}'")
-            else:
-                notes.append(f"architecture.md: part '{part['name']}' shows State '{current}', the code says '{calculated}'; run with --write")
-        loose = sorted({name.split("/")[0] + ("/" if "/" in name else "") for name in code if not base.parts_for([name])})
-        for item in loose:
-            warnings.append(
-                f"`{item}` is tracked code that no part maps; add it to a part, list it under `**Not code**:` "
-                "in architecture.md, or run the baseline recover command"
-            )
+    hashes = part_hashes(root, base, files or [])
+    expected = {p for key, f in features.items() if f['claim'] == 'NOT DONE' for p in f['parts']}
+    stamp_key = spec_key(args.stamp) if args.stamp not in (None, '*') else ''
+    if stamp_key and stamp_key not in features: errors.append('--stamp identifies no feature')
+    if stamp_key and not features.get(stamp_key, {}).get('done'): errors.append('--stamp of a feature requires accepted DONE')
+    for part in base.parts:
+        name = part['name']
+        status['parts'][name] = 'built' if name in hashes else 'planned'
+        if part['record'].get('state') == 'built' and name not in hashes:
+            errors.append(f'part {name!r} is built but paths match no file any more')
+        stamp_path = base.memory / 'stamps' / (digest(name) + '.json')
+        snapshot.setdefault(stamp_path, contents(stamp_path))
+        old = load_json(stamp_path, errors, root)
+        if old and (old.get('version') != 3 or old.get('part') != name or not isinstance(old.get('digest'), str) or not HEX.fullmatch(old['digest'])):
+            errors.append(f'invalid stamp schema for {name}')
+        synced = old.get('digest') or state.get('stamp', {}).get('parts', {}).get(name)
+        moved = synced and hashes.get(name) != synced
+        stamping = args.stamp is not None and (args.stamp == '*' or name in features.get(stamp_key, {}).get('parts', []))
+        if stamping and name in hashes:
+            if moved and not args.reason and not stamp_key: errors.append(f'stamping changed part {name} requires --reason')
+            writes[stamp_path] = dump_json({'version': 3, 'part': name, 'digest': hashes[name], 'reason': args.reason or 'accepted feature / initial baseline'})
+        elif moved and name not in expected and not args.structural:
+            warnings.append(f'part {name!r} changed since its synced point; reconcile it')
+    if files is None: warnings.append('not a git repository: code scope and history unavailable')
+    for name in files or []:
+        if base.is_code(name) and not base.parts_for([name]): warnings.append(f'`{name}` is code that no part maps')
+    for message in agent_commits(root, str(state.get('accepted_base', ''))): warnings.append(message)
+    if args.run_rule_checks or args.gate:
+        from baseline_runtime import run
+        for ident, entry in base.of_kind('AR-').items():
+            command = entry['record'].get('check', '').strip('` ')
+            if command and command != '-' and not command.startswith('['):
+                code, output = run(command, root, RULE_CHECK_TIMEOUT)
+                if code:
+                    message = f'{ident} check failed (`{command}`): ' + ' / '.join(output.strip().splitlines()[-3:])
+                    (errors if entry['record'].get('blocking', '').lower() in ('yes', 'true', 'blocking') else warnings).append(message)
 
-        hashes = part_hashes(root, base, code)
-        synced: dict[str, str] = dict(stamp.get("parts", {}))
-        if args.stamp is not None and (args.stamp == "*" or stamp_key in keys):
-            wanted = set(hashes)
-            if args.stamp != "*":
-                listed = {part["name"] for name in plan_parts[stamp_key] if (part := base.part(name))}
-                wanted &= listed
-                if not wanted:
-                    notes.append(f"--stamp {args.stamp}: its plan.md lists no built part under `**Parts**:`, so nothing was stamped")
-            for name in wanted:
-                synced[name] = hashes[name]
-            head = git(root, "rev-parse", "HEAD")
-            stamp = {"commit": head[0] if head else stamp.get("commit", ""), "parts": synced}
-        elif not synced:
-            notes.append("no synced point recorded yet; run with --stamp once code and baseline agree")
+    global_errors = list(errors)
+    scoped = [target] if target in features else list(features)
+    for key in features:
+        if key in scoped:
+            errors.extend(f'specs/{key}: {m}' for m in ferrors[key])
+            warnings.extend(f'specs/{key}: {m}' for m in fwarnings[key])
         else:
-            expected = {part["name"] for name in expected_parts if (part := base.part(name))}
-            for name, now_hash in sorted(hashes.items()):
-                if name in expected:
-                    continue
-                if name not in synced:
-                    notes.append(f"part '{name}' has no synced point yet; run with --stamp once it agrees with the baseline")
-                elif synced[name] != now_hash:
-                    warnings.append(
-                        f"part '{name}' changed since its synced point, and no unfinished feature lists it under `**Parts**:`; "
-                        "run the baseline reconcile command"
-                    )
-    if arch_changed:
-        writes[memory / "architecture.md"] = "\n".join(arch_lines) + "\n"
-    if stamp.get("parts") or stamp.get("commit"):
-        state["stamp"] = stamp
-    if dump_json(state) != state_before:
-        state["version"] = 2
-        writes[memory / STATE_FILE] = dump_json(state)
-
-    # No agent as a contributor. The commit-msg hook prevents it; this reports what got past the hook.
-    for message in agent_commits(root, str(stamp.get("commit", ""))):
-        warnings.append(message + "; do not repeat it, and rewrite history only when the user authorizes it")
-
-    # Architecture rules that carry an executable check.
-    for ident, entry in base.of_kind("AR-").items():
-        command = entry["record"].get("check", "").strip("` ")
-        if not command or command == "-" or command.startswith("["):
-            continue
-        if not args.run_rule_checks:
-            notes.append(f"{ident} has a Check command; run with --run-rule-checks to execute it")
-            continue
-        try:
-            ran = subprocess.run(
-                command, shell=True, cwd=root, capture_output=True, text=True, check=False, timeout=RULE_CHECK_TIMEOUT
-            )
-            failed, output = ran.returncode != 0, ran.stdout + ran.stderr
-        except subprocess.TimeoutExpired:
-            failed, output = True, f"timed out after {RULE_CHECK_TIMEOUT} seconds"
-        if failed:
-            blocking = entry["record"].get("blocking", "").lower() in ("yes", "true", "blocking")
-            tail = output.strip().splitlines()[-3:]
-            message = f"{ident} check failed (`{command}`): " + (" / ".join(tail) or "no output")
-            (errors if blocking else warnings).append(message)
-
-    if args.strict:
-        errors, warnings = errors + warnings, []
-    for message in notes:
-        print(f"note: {message}")
-    for message in warnings:
-        print(f"warning: {message}")
-    for message in errors:
-        print(f"error: {message}")
-    changing = args.write or args.repin is not None or args.stamp is not None or bool(args.mode)
-    if errors and not advisory:
-        print(
-            f"baseline check failed: {len(errors)} error(s), {len(warnings)} warning(s)"
-            + ("; nothing was written" if changing else "")
-        )
-        return 1
+            notes.extend(f'other feature specs/{key}: {m}' for m in ferrors[key] + fwarnings[key])
+    if args.strict: errors.extend(warnings); warnings = []
+    changing = args.write or args.repin is not None or args.stamp is not None or args.record_run or args.acknowledge
+    # Explicit preference changes are separate from accepting delivery or pins.
+    if args.mode and state_valid:
+        state.update(version=3)
+        if working_files(root) != initial_files: raise ValueError('file inventory changed during validation; retry')
+        transact(root, local, {state_path: dump_json(state)}, snapshot)
+        snapshot[state_path] = contents(state_path)
+        initial_files = working_files(root)
+    applicable = {}
     if changing:
-        for path, text in writes.items():
-            # Calculated cells need --write; the generated state follows any changing run.
-            if path.name in (STATE_FILE, PINS_FILE) or args.write:
-                write_atomic(path, text)
-    if errors:
-        print(f"baseline check failed: {len(errors)} error(s), {len(warnings)} warning(s)")
-        print("advisory mode: reported, not blocking; switch with --mode blocking once the check is clean")
-        return 0
-    print(f"baseline check passed: {len(capabilities)} capabilities, {len(spec_dirs)} specs, {len(warnings)} warning(s)")
-    return 0
+        for key in scoped if target else features:
+            path = features[key]['folder'] / PINS_FILE
+            selected = args.write or args.acknowledge or args.repin == '*' or repin_key == key
+            if selected and not global_errors and not ferrors[key] and (not args.strict or not fwarnings[key]):
+                record = records[key]
+                record['version'] = 3
+                if dump_json(record) != (path.read_text() if path.exists() else ''): applicable[path] = dump_json(record)
+        if not errors:
+            applicable.update(writes)
+            if not state.get('adopted') and args.write:
+                head = git(root, 'rev-parse', 'HEAD')
+                state.update(version=3, adopted=True, accepted_base=args.base or (head[0] if head else ''))
+                applicable[state_path] = dump_json(state)
+        if args.dry_run:
+            notes.extend(f'would write {p.relative_to(root)}' for p in applicable)
+        else:
+            if working_files(root) != initial_files: raise ValueError('file inventory changed during validation; retry')
+            transact(root, local, applicable, snapshot)
+            notes.extend(f'wrote {p.relative_to(root)}' for p in applicable)
+    if args.context:
+        for ident, value in status['capabilities'].items():
+            entry = base.entries[ident]
+            entry['record'].update(delivery=value['delivery'], **{'owning spec': value['owner']})
+            entry['raw'] = '| ' + ' | '.join(entry['record'][h].replace('|', '\\|') for h in entry['header']) + ' |'
+        for part in base.parts:
+            part['record']['state'] = status['parts'][part['name']]
+            part['raw'] = '| ' + ' | '.join(part['record'][h].replace('|', '\\|') for h in part['header']) + ' |'
+        context_code = print_context(base, names_of(args.ids), names_of(args.paths))
+        for m in errors: print('error: ' + m)
+        return int(bool(context_code or errors))
+    if recorded_result is not None:
+        for check in recorded_result['checks']:
+            notes.append(f"executed {check['exact command']}: exit {check['exit']}")
+        if any(c['exit'] != 0 for c in recorded_result['checks']):
+            errors.append('recorded quality gate failed; logs saved, completion not accepted')
+    if args.status and not args.json:
+        for ident, value in status['capabilities'].items(): print(f"{ident}: {value['delivery']} ({value['owner'] or 'no owner'})")
+        for name, value in status['parts'].items(): print(f'{name}: {value}')
+    if args.json:
+        print(json.dumps({**status, 'errors': errors, 'warnings': warnings, 'notes': notes}, indent=2))
+    else:
+        for m in notes: print('note: ' + m)
+        for m in warnings: print('warning: ' + m)
+        for m in errors: print('error: ' + m)
+        print(f"baseline check {'failed' if errors else 'passed'}: {len(errors)} error(s), {len(warnings)} warning(s)" + ('; nothing was written' if changing and errors and not applicable else ''))
+    failed_run = recorded_result is not None and any(c['exit'] != 0 for c in recorded_result['checks'])
+    return int(failed_run) if advisory else int(bool(errors) or failed_run)
 
 
-if __name__ == "__main__":
+def main() -> int:
+    parser = argparse.ArgumentParser(description='Validate baseline intent and current evidence')
+    for flag in ('write', 'strict', 'run-rule-checks', 'context', 'scan', 'gate', 'require-done', 'status', 'json', 'record-run', 'acknowledge', 'dry-run', 'structural'):
+        parser.add_argument('--' + flag, action='store_true')
+    for flag in ('repin', 'stamp'): parser.add_argument('--' + flag, nargs='?', const='*')
+    for flag in ('feature', 'base', 'touched'): parser.add_argument('--' + flag)
+    parser.add_argument('--reason', default='')
+    parser.add_argument('--inactive-days', type=int, default=30)
+    parser.add_argument('--ids', default=''); parser.add_argument('--paths', default='')
+    parser.add_argument('--mode', choices=('advisory', 'blocking'))
+    parser.add_argument('--commit-msg', type=Path); parser.add_argument('--root', type=Path)
+    args = parser.parse_args()
+    if args.gate and (args.write or args.repin is not None or args.stamp is not None or args.mode or args.record_run or args.acknowledge or args.structural or args.scan or args.touched or args.context or args.commit_msg):
+        print('error: --gate is a read-only mandatory check; discovery, recovery and mutation options are incompatible')
+        return 1
+    if args.dry_run and args.mode:
+        print('error: --dry-run cannot change persisted mode'); return 1
+    root = args.root or find_root(Path.cwd())
+    if args.commit_msg: return check_commit_message(root or Path.cwd(), args.commit_msg)
+    if root is None or not (root / '.specify').is_dir():
+        print('error: no .specify folder found'); return 1
+    root = root.resolve()
+    if args.scan: return print_scan(root)
+    if args.record_run and not args.feature:
+        print('error: --record-run requires explicit --feature'); return 1
+    try:
+        with locked(root) as local:
+            if (local / 'journal.json').exists() and args.gate:
+                print('error: interrupted transaction; run a non-gate check to recover'); return 1
+            recover(root, local)
+            return check_project(args, root, local)
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        print(f'error: baseline operation failed: {exc}'); return 1
+
+
+if __name__ == '__main__':
     sys.exit(main())

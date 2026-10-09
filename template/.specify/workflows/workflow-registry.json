@@ -2,20 +2,16 @@
   "schema_version": "1.0",
   "workflows": {
     "speckit": {
-      "name": "Full SDD Cycle",
-      "version": "1.0.1",
       "description": "Runs specify \u2192 plan \u2192 tasks \u2192 implement with review gates",
+      "name": "Full SDD Cycle",
       "source": "bundled",
-      "installed_at": "2026-10-09T15:37:07.405083+00:00",
-      "updated_at": "2026-10-09T15:37:07.405101+00:00"
+      "version": "1.0.1"
     },
     "speckit-pro": {
-      "name": "speckit-pro Cycle",
-      "version": "1.1.0",
       "description": "Runs specify \u2192 clarify \u2192 plan \u2192 tasks \u2192 analyze \u2192 baseline check \u2192 implement \u2192 converge with review gates",
+      "name": "speckit-pro Cycle",
       "source": "speckit-pro",
-      "installed_at": "2026-10-09T15:37:08.964859+00:00",
-      "updated_at": "2026-10-09T15:37:08.964872+00:00"
+      "version": "1.2.0"
     }
   }
 }

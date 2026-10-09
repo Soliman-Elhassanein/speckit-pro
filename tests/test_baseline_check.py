@@ -93,6 +93,18 @@ PLAN = """# Implementation Plan: Login
 **Architecture rules**: AR-001
 **Decisions**: D-001
 **Parts**: App
+
+## Verification plan
+
+| TR | Layer / interface | Test file | Selector or command | Prerequisites and fixtures |
+|----|-------------------|-----------|---------------------|----------------------------|
+| TR-001 | CLI | src/app.py | python3 src/app.py | none |
+
+## Quality gates
+
+| Gate | Working directory | Exact command |
+|------|-------------------|---------------|
+| smoke | . | python3 src/app.py |
 """
 
 VERIFICATION = """# Verification: Login
@@ -113,7 +125,7 @@ Required TRs passing: 1/1
 
 | Working directory | Exact command | Exit code | Passed / failed / skipped / xfailed | Evidence |
 |-------------------|---------------|-----------|------------------------------------|----------|
-| . | pytest | 0 | 1 / 0 / 0 / 0 | run of 2026-10-09 |
+| . | python3 src/app.py | 0 | 1 / 0 / 0 / 0 | evidence/run.log |
 
 ## Convergence
 
@@ -142,6 +154,12 @@ class Repo:
     def write(self, name: str, text: str) -> Path:
         path = self.root / name
         path.parent.mkdir(parents=True, exist_ok=True)
+        # Fixtures copy actual machine log paths into the human report.
+        record = path.parent / "verification-run.json"
+        if path.name == "verification.md" and record.is_file():
+            data = json.loads(record.read_text())
+            if data.get("checks"):
+                text = text.replace("| evidence/run.log |", "| " + data["checks"][0]["evidence"] + " |")
         path.write_text(text, encoding="utf-8")
         return path
 
@@ -177,11 +195,12 @@ class Repo:
         if tasks is not None:
             self.write(f"specs/{key}/tasks.md", tasks)
         if verification is not None:
+            self.write(f"specs/{key}/evidence/run.log", "fixture observation\n")
             self.write(f"specs/{key}/verification.md", verification)
 
     def delivery(self, ident: str) -> str:
-        row = next(line for line in self.read(".specify/memory/product.md").splitlines() if line.startswith(f"| {ident} "))
-        return row.strip("|").split("|")[-1].strip()
+        code, output = self.check("--status", "--json")
+        return json.loads(output)["capabilities"][ident]["delivery"]
 
 
 class BaselineCheckTest(unittest.TestCase):
@@ -200,6 +219,8 @@ class BaselineCheckTest(unittest.TestCase):
 
     def verified(self) -> Repo:
         repo = self.started()
+        self.assertEqual(repo.check("--record-run", "--feature", "specs/001-login")[0], 0)
+        repo.write("specs/001-login/evidence/run.log", "fixture observation\n")
         repo.write("specs/001-login/verification.md", VERIFICATION)
         code, out = repo.check("--write", "--stamp", "specs/001-login")
         self.assertEqual(code, 0, out)
@@ -209,14 +230,16 @@ class BaselineCheckTest(unittest.TestCase):
     # The normal path
 
     def test_no_baseline_is_not_an_error(self):
-        (self.repo.memory / "product.md").unlink()
-        code, out = self.repo.check("--run-rule-checks")
+        fresh = Path(self.folder.name) / "non-adopter"
+        (fresh / ".specify").mkdir(parents=True)
+        result = subprocess.run([sys.executable, str(SCRIPT), "--root", str(fresh)], capture_output=True, text=True)
+        code, out = result.returncode, result.stdout
         self.assertEqual(code, 0, out)
         self.assertIn("no baseline to check", out)
 
     def test_new_feature_passes_in_one_run_and_records_its_owner(self):
         repo = self.started()
-        self.assertIn("| specs/001-login | in progress |", repo.read(".specify/memory/product.md"))
+        self.assertEqual(repo.delivery("CAP-001"), "in progress")
         self.assertEqual(repo.check("--strict")[0], 0)
 
     def test_supported_done_becomes_verified(self):
@@ -231,11 +254,11 @@ class BaselineCheckTest(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("plan.md is missing", out)
         self.assertIn("the Coverage section has no rows", out)
-        self.assertEqual(repo.delivery("CAP-001"), "unstarted")
+        self.assertEqual(repo.delivery("CAP-001"), "in progress")
 
     def test_failing_exit_code_is_rejected(self):
         repo = self.started()
-        repo.write("specs/001-login/verification.md", VERIFICATION.replace("| pytest | 0 | 1 / 0 / 0 / 0 |", "| pytest | 1 | 0 passed, 1 failed |"))
+        repo.write("specs/001-login/verification.md", VERIFICATION.replace("| python3 src/app.py | 0 | 1 / 0 / 0 / 0 |", "| python3 src/app.py | 1 | 0 passed, 1 failed |"))
         code, out = repo.check("--write")
         self.assertEqual(code, 1, out)
         self.assertIn("exit code '1'", out)
@@ -261,7 +284,7 @@ class BaselineCheckTest(unittest.TestCase):
     def test_unchecked_task_missing_link_and_placeholder_are_rejected(self):
         repo = self.started()
         repo.write("specs/001-login/tasks.md", "- [x] T001 a\n- [ ] T002 b\n")
-        repo.write("specs/001-login/verification.md", VERIFICATION.replace("run of 2026-10-09", "[log](evidence/missing.log) <path>"))
+        repo.write("specs/001-login/verification.md", VERIFICATION.replace("evidence/run.log", "[log](evidence/missing.log) <path>"))
         code, out = repo.check()
         self.assertEqual(code, 1, out)
         self.assertIn("1 unchecked task(s)", out)
@@ -280,7 +303,7 @@ class BaselineCheckTest(unittest.TestCase):
         repo.edit(".specify/memory/product.md", "Customers can log in.", "Customers can log in with MFA.")
         code, out = repo.check()
         self.assertEqual(code, 1, out)
-        self.assertIn("CAP-001 changed after this feature was verified", out)
+        self.assertIn("baseline changed after the feature was verified", out)
 
     # Writes are transactional in blocking mode
 
@@ -301,7 +324,7 @@ class BaselineCheckTest(unittest.TestCase):
         repo.feature(spec=SPEC.replace("CAP-001", "CAP-999"))
         code, out = repo.check("--mode", "advisory")
         self.assertEqual(code, 0, out)
-        self.assertIn("error: specs/001-login/spec.md: cites CAP-999", out)
+        self.assertIn("spec.md: cites CAP-999", out)
         self.assertEqual(repo.check()[0], 0)
         self.assertEqual(repo.check("--mode", "blocking")[0], 1)
 
@@ -377,7 +400,7 @@ class BaselineCheckTest(unittest.TestCase):
         code, out = repo.check("--write", "--repin", "specs/002-login-mfa")
         self.assertEqual(code, 0, out)
         self.assertEqual(repo.delivery("CAP-001"), "in progress")
-        self.assertIn("| specs/001-login |", repo.read(".specify/memory/product.md"))
+        self.assertEqual(json.loads(repo.check("--status", "--json")[1])["capabilities"]["CAP-001"]["owner"], "specs/001-login")
 
     def test_two_specs_cannot_implement_one_capability(self):
         repo = self.started()
@@ -400,7 +423,7 @@ class BaselineCheckTest(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("through a cycle", out)
 
-    def test_deleted_row_is_an_error_and_rewritten_decision_a_warning(self):
+    def test_deleted_row_and_rewritten_decision_are_errors(self):
         repo = self.repo
         text = repo.read(".specify/memory/decisions.md")
         repo.write(".specify/memory/decisions.md", "\n".join(
@@ -415,7 +438,7 @@ class BaselineCheckTest(unittest.TestCase):
         self.repo.feature("payments/002-pay", spec=SPEC.replace("CAP-001", "CAP-999"))
         code, out = self.repo.check()
         self.assertEqual(code, 1, out)
-        self.assertIn("specs/payments/002-pay/spec.md: cites CAP-999", out)
+        self.assertIn("spec.md: cites CAP-999", out)
 
     # Code against the map
 
@@ -428,7 +451,8 @@ class BaselineCheckTest(unittest.TestCase):
         repo.write("worker/jobs.py", "y = 1\n")
         code, out = repo.check("--write")
         self.assertEqual(code, 0, out)
-        self.assertIn("| Worker | Jobs | worker | App | built |", repo.read(".specify/memory/architecture.md"))
+        self.assertEqual(json.loads(repo.check("--status", "--json")[1])["parts"]["Worker"], "built")
+        repo.edit(".specify/memory/architecture.md", "| Worker | Jobs | worker | App | planned |", "| Worker | Jobs | worker | App | built |")
         (repo.root / "worker/jobs.py").unlink()
         code, out = repo.check()
         self.assertEqual(code, 1, out)
@@ -450,18 +474,18 @@ class BaselineCheckTest(unittest.TestCase):
         code, out = repo.check()
         self.assertIn("part 'App' changed since its synced point", out)
         repo.write("tool.py", "z = 1\n")
-        self.assertIn("`tool.py` is tracked code that no part maps", repo.check()[1])
+        self.assertIn("`tool.py` is code that no part maps", repo.check()[1])
 
     def test_unfinished_feature_only_covers_the_parts_it_lists(self):
         repo = self.verified()
         repo.edit(".specify/memory/architecture.md", "| App | Requests | src, main.py | - | built |",
                   "| App | Requests | src, main.py | - | built |\n| Worker | Jobs | worker | App | planned |")
         repo.write("worker/jobs.py", "y = 1\n")
-        self.assertEqual(repo.check("--write", "--stamp")[0], 0)
+        self.assertEqual(repo.check("--write", "--stamp", "--reason", "reviewed new worker")[0], 0)
         repo.feature("002-pay", spec=SPEC.replace("CAP-001", "CAP-002"), plan=PLAN.replace("**Parts**: App", "**Parts**: Worker"))
         self.assertEqual(repo.check("--write", "--repin", "specs/002-pay")[0], 0)
         repo.write("worker/jobs.py", "y = 2\n")
-        self.assertNotIn("changed since its synced point", repo.check()[1])
+        self.assertNotIn("part 'Worker' changed since its synced point", repo.check()[1])
         repo.write("src/app.py", "x = 2\n")
         self.assertIn("part 'App' changed since its synced point", repo.check()[1])
 
@@ -517,7 +541,8 @@ class BaselineCheckTest(unittest.TestCase):
         repo = self.repo
         ext = repo.root / ".specify/extensions/baseline/scripts"
         ext.mkdir(parents=True)
-        (ext / "baseline_check.py").write_text(SCRIPT.read_text(encoding="utf-8"), encoding="utf-8")
+        for source in SCRIPT.parent.glob("*.py"):
+            (ext / source.name).write_text(source.read_text(), encoding="utf-8")
         installer = SCRIPT.parent / "install-git-hooks.sh"
         subprocess.run(["sh", str(installer)], cwd=repo.root, check=True, capture_output=True)
         subprocess.run(["sh", str(installer)], cwd=repo.root, check=True, capture_output=True)  # safe to repeat

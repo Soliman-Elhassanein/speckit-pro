@@ -26,7 +26,7 @@ git status --short
 CHECK --context --paths <changed folders, comma separated>
 ```
 
-`<commit>` is the `commit` value under `stamp` in `.specify/memory/baseline-state.json`. If history was rewritten and that commit is gone, use `git log -- <paths>` to find the changes, or ask the user which commit to compare against.
+`<commit>` is an explicitly selected comparison commit from project history. Per-part stamps record content digests, not Git commits. If history was rewritten and that commit is gone, use `git log -- <paths>` to find the changes, or ask the user which commit to compare against.
 
 ### 2. Classify each change
 
@@ -58,7 +58,7 @@ Present the table, with your recommendation for every row that needs a decision.
 Once the code, the specs and the baseline agree:
 
 ```sh
-CHECK --write --stamp
+CHECK --write --stamp --reason "reviewed and reconciled changed parts"
 ```
 
-A bare `--stamp` records every part as agreeing with the baseline, so run it only after every change in step 2 has a decision. Report what changed, what was decided, and the check result. Commit the reconciliation as its own unit.
+Rerun affected completed features with `--record-run --feature <feature>` first: stamping never renews their evidence. A bare `--stamp` records every part as agreeing with the baseline, so run it only after every change in step 2 has a decision. Report what changed, what was decided, and the check result. Commit the reconciliation as its own unit.

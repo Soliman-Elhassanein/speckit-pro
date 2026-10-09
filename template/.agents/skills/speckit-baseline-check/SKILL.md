@@ -1,6 +1,6 @@
 ---
 name: speckit-baseline-check
-description: Run the deterministic baseline check and write the calculated cells
+description: Validate baseline pins and current evidence; calculate status without editing shared rows
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: Soliman-Elhassanein
@@ -15,63 +15,84 @@ metadata:
 $ARGUMENTS
 ```
 
-You **MUST** consider the user input before proceeding (if not empty).
+Consider the input. Run the script; do not replace its result with your judgment.
+`CHECK` means `python3 .specify/extensions/baseline/scripts/baseline_check.py` from the root.
+`<feature>` means the explicit current feature folder (or `--feature current` to read `.specify/feature.json`).
 
-This command runs a script. The script decides; do not replace its result with your own judgment. `CHECK` stands for `python3 .specify/extensions/baseline/scripts/baseline_check.py`, run from the repository root. `<feature>` is the current feature folder, such as `specs/001-login`; any form of that path works.
+| When | Run | Purpose |
+|------|-----|---------|
+| After specify | `CHECK --write --feature <feature> --repin <feature>/spec.md` | Record initial citations without modifying shared baseline rows. |
+| After plan | `CHECK --write --feature <feature> --repin <feature>/plan.md` | Record stack, parts and plan citations; preserve spec pins. |
+| Before analyze | `CHECK --feature <feature>` | Add errors to analysis as critical findings. |
+| Before implement | `CHECK --gate --feature <feature>` | Mandatory read-only check, including executable architecture rules. |
+| Final verification | `CHECK --record-run --feature <feature>` | Execute every planned quality gate and record inputs, exit codes and hashed logs. |
+| After converge | `CHECK --write --feature <feature>` | Accept supported DONE evidence. |
+| After implement | `CHECK --write --feature <feature> --stamp <feature>` | Accept supported DONE and synchronize its parts. |
+| Final workflow gate | `CHECK --gate --require-done --feature <feature>` | Independently require current completion after all agent steps. |
+| Global CI | `CHECK --gate --strict --base <accepted-or-PR-base-commit>` | Check all features and accepted history; warnings fail. |
+| Inspect status | `CHECK --status --json` | Calculate capability ownership, delivery and part state on read. |
 
-## Which form to run
+## Checks and evidence
 
-| When | Run | Why |
-|------|-----|-----|
-| After specify | `CHECK --write --repin <feature>/spec.md` | Records the spec as the owner of its capability and pins the entries the spec cites. |
-| After plan | `CHECK --write --repin <feature>/plan.md` | Pins the stack, the parts and the entries the plan cites. It leaves the spec's pins alone. |
-| Before analyze | `CHECK` | Read-only. Its errors go into the analysis as critical findings. |
-| Before implement | `CHECK --run-rule-checks` | Stops implementation while anything is wrong. |
-| After converge | `CHECK --write` | Recalculates Delivery. |
-| After implement | `CHECK --write --stamp <feature>` | Recalculates Delivery from the finished record, and records the synced point of the parts this feature's plan lists. |
-| On request, or in CI | `CHECK --strict` | Read-only; warnings count as errors. |
+IDs and table widths must be valid; escape command pipes as `\|`. Citation lines are
+`**Implements**`, `**Changes**`, `**Product rules**`, `**Architecture rules**`,
+`**Decisions**` and `**Parts**`. Each capability has one implementing owner.
+New completion must be approved, unblocked by open questions and free of rejected
+or superseded cited decisions, including on the first DONE claim.
 
-## What it checks
+DONE requires plan, verification plan, complete quality gates, checked tasks,
+passing FR/AS/TR coverage, numeric execution counts with no failed/skipped/xfailed
+checks, existing local evidence, known uppercase statuses and converged outcome.
+A skip reason alone never waives a required check.
 
-- IDs are unique, and every ID on a citation line of a spec or plan exists. The citation lines are `**Implements**`, `**Changes**`, `**Product rules**`, `**Architecture rules**`, `**Decisions**` and `**Parts**`. IDs in prose are not citations.
-- Every unfinished spec names a capability, each one is `approved`, and none is blocked by an open question.
-- One spec implements a capability. A later spec that changes it lists it under `**Changes**:`.
-- No unfinished spec or plan cites a decision that is rejected or superseded.
-- **Stale pins**: a cited entry, a listed part or the stack changed after the spec or plan was written. A capability that changes after its feature was verified is reported too.
-- **Unsupported DONE**: `Completion: DONE` in `verification.md` is a claim. It is an error, and the capability stays `in progress`, unless all of these hold:
-  - `plan.md` and `tasks.md` exist, and every task is checked;
-  - the record has a tested revision and no unfilled placeholder;
-  - every FR, AS and TR ID in `spec.md` appears in a Coverage row whose status is `PASS`, and no status is outside `PASS`, `FAIL`, `NOT RUN`, `BLOCKED`;
-  - the Execution table has at least one command, every exit code is `0`, and no count reports a failure;
-  - no row outside "Historical runs" is open, failed or skipped, and every evidence link resolves;
-  - the convergence `Outcome:` is `converged`.
-- **Evidence still current**: `spec.md` or `plan.md` changed after the feature was verified, and `verification.md` did not.
-- **Code against the map**: code that no part maps, a built part whose paths match no file, and a part whose code changed since its synced point while no unfinished feature lists that part.
-- **Rule checks**: with `--run-rule-checks`, each architecture rule's Check command. A failing rule marked Blocking is an error; any other is a warning.
-- **History**: a baseline row that was deleted since the last commit is an error; a rewritten decision is a warning.
-- **No agent as a contributor**: a commit since the last synced point whose message, author or committer names a coding agent is a warning. Do not repeat it; rewrite history only when the user authorizes it. The `commit-msg` hook stops such commits before they are made; install it with `sh .specify/extensions/baseline/scripts/install-git-hooks.sh`.
-- Dependencies between capabilities exist and form no cycle. Links inside the three baseline files resolve.
+`verification-run.json` must match the spec, plan, task meaning (checkboxes excluded),
+governing baseline entries, constitution when present, listed parts' code, shared `**Verification inputs**` parts (such as Tooling) and linked
+local contracts. Each recorded command must match the planned gate and have exit 0
+and an unchanged log. Cosmetic edits to verification.md or reconciliation stamps
+cannot renew evidence. Complete the Markdown report from the recorded run's exact
+commands and log paths; never invent results. Manual observations in the JSON record
+need method, platform, expected/observed result, PASS, existing local evidence and its SHA-256 digest (first 16 hexadecimal characters).
+Local files are reviewable evidence, not cryptographic attestation of a trusted runner.
 
-`--strict` turns warnings into errors.
+## Reviewed changes
 
-## What it writes
+Use `--repin <feature>/spec.md` or `plan.md` for the file you actually reviewed.
+Changing an existing pin requires `--reason`. Use `--dry-run` to preview writes;
+with `--record-run` it previews commands without executing them. A spec edit also
+requires reviewing its downstream plan/tasks, then `--feature <feature>
+--acknowledge --reason "..."`. This acknowledgment does not renew test evidence.
+A valid targeted repin may be saved while other features still report errors.
+Global baseline structure and history errors still prevent acceptance.
 
-The script writes only what it calculates, and never the meaning of an entry:
+For an amended capability, create a new `**Changes**:` spec. Initial repinning freezes
+its predecessor's accepted revision and the new capability revision. For a second
+change, name `**Previous change**: specs/<previous-change>`. Preserve predecessor
+pins and run records as historical evidence; do not reanchor old tests onto new
+promises. Parallel unrelated features need no shared calculated-cell edits.
 
-- with `--write`: the Delivery and Owning spec cells of `product.md`, and the State cell of the parts table;
-- with `--repin`: `<feature>/baseline-pins.json`;
-- with `--stamp` or `--mode`: `.specify/memory/baseline-state.json`.
+## Drift and persistence
 
-In blocking mode it writes nothing when it reports an error. Commit what it wrote with the work that caused the change.
+Map root tooling and hidden product code explicitly. Unfinished features only excuse
+reconciliation warnings for listed parts; they never excuse stale completed evidence.
+Inactive unfinished work is reported after 30 days. Set `Completion: ABANDONED` when
+work is abandoned; it provides no drift exemption. Feature-scoped stamping requires
+supported DONE. Global reconciliation stamps need `--reason` when code changed.
 
-## Modes
+Writes go to per-feature pins/run records, per-part `.specify/memory/stamps/` files,
+and initial adoption/mode in baseline-state.json. Product and architecture rows are
+never rewritten. Legacy calculated columns are ignored. A checkout lock and journal
+make mutations recoverable, and changed inputs abort acceptance. An interrupted
+transaction blocks gates; run a regular check to recover before retrying.
 
-`CHECK --mode advisory` makes the check report errors without stopping the work; `CHECK --mode blocking` makes errors stop it again. A new project is blocking. A project that adopts the baseline with code already written starts advisory, and switches once the check is clean. A project with no `product.md` has no baseline, and the check passes with a note.
+Advisory mode is for recovery diagnostics. Invalid evidence is never accepted;
+`--gate` always blocks and cannot mutate or weaken checks. Non-adopter discovery is
+permissive; a missing adopted baseline or required gate baseline fails. Initialize an
+accepted history base with `CHECK --write --base HEAD` after creating the baseline.
+CI supplies the PR base explicitly, with full Git history. Deleted accepted IDs and
+rewritten decision text fail; retire rows or create a superseding decision instead.
 
-## Act on the result
-
-- **Exit 0**: report the result and every warning, then continue.
-- **Exit 1**: show the errors exactly as printed. Before implement, stop: implementation does not start until they are fixed.
-- **Stale pin**: re-read the changed entry with `CHECK --context --ids <ID>`, update the spec or plan if the change affects it, then `CHECK --repin <feature>/spec.md` or `<feature>/plan.md`. Repin only the file you re-read.
-- **A part changed since its synced point**, or **code no part maps**: run the baseline reconcile command.
-- Anything that needs a change to the meaning of `product.md`, `architecture.md` or `decisions.md` goes to the user through the baseline amend command; do not edit those files here.
+The installer preserves foreign Git hooks. Integrate its printed invocation when
+necessary; local hooks can be bypassed. CI must be configured with the project's
+runtime and required in repository branch settings. Analysis and convergence judge
+assertion meaning and architecture intent; the script checks their records and
+executable rules, not the truth of their semantic conclusions.

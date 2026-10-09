@@ -1,5 +1,7 @@
 # Decisions: [PRODUCT NAME]
 
+**Version**: 0.1.0 | **Last amended**: [YYYY-MM-DD]
+
 This file says WHY. One row per decision, product or architecture, including the options that
 were rejected. Rows are never deleted or rewritten: a changed decision gets a new row, and the
 old row's status becomes `superseded by D-NNN`.

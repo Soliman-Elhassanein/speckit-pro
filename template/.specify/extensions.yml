@@ -8,7 +8,7 @@ hooks:
     command: speckit.baseline.context
     enabled: true
     optional: false
-    priority: 10
+    priority: 1
     prompt: Execute speckit.baseline.context?
     description: Choose the path for this request and load the product baseline
     condition: null

@@ -23,6 +23,10 @@ force=0
 with_cli=0
 agent=
 target=.
+# Retain exact arguments for the rollback wrapper.
+original_args_file=$(mktemp)
+trap 'rm -f "$original_args_file"' EXIT
+printf "%s\0" "$@" > "$original_args_file"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -48,7 +52,20 @@ version=$(cat "$here/template/SPECKIT_VERSION")
 for tool in git bash python3; do
     command -v "$tool" >/dev/null 2>&1 || { echo "speckit-pro needs $tool on PATH" >&2; exit 1; }
 done
-python3 -c 'import yaml' 2>/dev/null || echo "warning: the Python package PyYAML is missing; Spec Kit needs it to compose the templates (pip install pyyaml)" >&2
+python3 -c 'import yaml' 2>/dev/null || { echo 'speckit-pro requires PyYAML (python3 -m pip install pyyaml)' >&2; exit 1; }
+
+if [ "${SPECKIT_PRO_INSTALL_TRANSACTION:-}" != 1 ]; then
+    python3 - "$here" "$target" "$original_args_file" <<'PYARGS'
+import pathlib, subprocess, sys
+package, target, arguments = sys.argv[1:]
+raw = pathlib.Path(arguments).read_bytes()
+args = [v.decode() for v in raw.split(b'\0')[:-1]] if raw else []
+# printf emits an empty item when no arguments were supplied.
+args = [v for v in args if v]
+raise SystemExit(subprocess.call([sys.executable, package + '/scripts/install-transaction.py', package, target, *args]))
+PYARGS
+    exit $?
+fi
 
 if [ "$with_cli" -eq 1 ]; then
     command -v uv >/dev/null 2>&1 || { echo "--with-cli needs uv: https://docs.astral.sh/uv/" >&2; exit 1; }
@@ -87,9 +104,9 @@ else
     if [ ! -e .specify ]; then
         agent=${agent:-codex}
         if [ "$agent" = "codex" ]; then
-            specify init --here --force --integration codex --integration-options="--skills" --script sh --ignore-agent-tools >/dev/null
+            specify init --here --force --integration codex --integration-options="--skills" --script sh --ignore-agent-tools
         else
-            specify init --here --force --integration "$agent" --script sh --ignore-agent-tools >/dev/null
+            specify init --here --force --integration "$agent" --script sh --ignore-agent-tools
         fi
         mode="new Spec Kit project for $agent"
     else
@@ -97,18 +114,24 @@ else
         mode="added to the existing Spec Kit project"
     fi
     if [ -d .specify/presets/universal-profile ]; then
-        specify preset remove universal-profile >/dev/null
+        specify preset remove universal-profile
     fi
-    specify preset add --dev "$here/preset" >/dev/null
+    specify preset add --dev "$here/preset"
     if [ -d .specify/extensions/baseline ]; then
-        specify extension add --dev "$here/extension" --force >/dev/null
+        specify extension add --dev "$here/extension" --force
     else
-        specify extension add --dev "$here/extension" >/dev/null
+        specify extension add --dev "$here/extension"
     fi
-    specify workflow add --dev "$here/workflow" >/dev/null
+    specify workflow add --dev "$here/workflow"
     # The workflow registry records where a local workflow came from; keep this machine's path out.
-    sed "s|$here/workflow|speckit-pro|" .specify/workflows/workflow-registry.json > .specify/workflows/registry.tmp
-    mv .specify/workflows/registry.tmp .specify/workflows/workflow-registry.json
+    python3 - <<'PYREG'
+import json
+from pathlib import Path
+p = Path('.specify/workflows/workflow-registry.json')
+data = json.loads(p.read_text())
+data['workflows']['speckit-pro']['source'] = 'speckit-pro'
+p.write_text(json.dumps(data, indent=2) + '\n')
+PYREG
 fi
 
 # The standard itself lives beside its modules, outside any agent's folder.
@@ -118,6 +141,9 @@ rm -rf "$target/.specify/speckit-pro/modules"
 cp -R "$here/modules" "$target/.specify/speckit-pro/modules"
 cp "$here/adoption-prompt.md" "$target/.specify/speckit-pro/adoption-prompt.md"
 echo "$version" > "$target/.specify/speckit-pro/SPECKIT_VERSION"
+
+# Machine-local lock/journal never belongs in project history.
+grep -qxF '.baseline-local/' "$target/.specify/.gitignore" 2>/dev/null || printf '\n.baseline-local/\n' >> "$target/.specify/.gitignore"
 
 # Agents do not list themselves as contributors: the commit-msg hook rejects it.
 if git -C "$target" rev-parse --git-dir >/dev/null 2>&1; then

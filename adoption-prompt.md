@@ -72,11 +72,11 @@ Do these in order.
      .specify/memory/product.md, architecture.md and decisions.md from the
      project's own material. Leave the stack rows empty if no stack is chosen.
      Finish with:
-       python3 .specify/extensions/baseline/scripts/baseline_check.py --write --stamp
+       python3 .specify/extensions/baseline/scripts/baseline_check.py --write --stamp --base HEAD
    - Code already exists: ask me first whether to adopt the baseline now. If
      I say yes, follow the baseline recover command, which starts the check in
      advisory mode. If I say no, skip this step: a project without product.md
-     is not blocked.
+     allows discovery checks; the full workflow and required CI gate need an adopted baseline.
    Show me the rows before writing them, as those commands require.
 
 10. Follow the adoption transaction in section 2 of the standard. The command

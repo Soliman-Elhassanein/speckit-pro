@@ -17,8 +17,7 @@ if [ -e "$hook" ] && ! grep -q "$marker" "$hook"; then
     echo "this repository already has its own commit-msg hook: $hook" >&2
     echo "add this line to it so that agents cannot list themselves as contributors:" >&2
     echo "  $call || exit 1" >&2
-    exit 0
-fi
+else
 
 mkdir -p "$hooks"
 cat > "$hook" <<HOOK
@@ -30,3 +29,19 @@ exec python3 "\$script" --commit-msg "\$1"
 HOOK
 chmod +x "$hook"
 echo "installed the commit-msg hook: $hook"
+fi
+
+# A work-in-progress commit checks structure, not completed acceptance evidence.
+pre="$hooks/pre-commit"
+if [ ! -e "$pre" ] || grep -q "speckit-pro: structural baseline" "$pre"; then
+    cat > "$pre" <<'PRE'
+#!/bin/sh
+# speckit-pro: structural baseline
+script="$(git rev-parse --show-toplevel)/.specify/extensions/baseline/scripts/baseline_check.py"
+[ -f "$script" ] || exit 0
+exec python3 "$script" --structural
+PRE
+    chmod +x "$pre"
+else
+    echo "existing pre-commit hook preserved; add the baseline --structural invocation to it" >&2
+fi

@@ -63,7 +63,7 @@ Give the specify command this block, and have it written directly below the `**I
 **Baseline**: <output of `git rev-parse --short HEAD`>
 ```
 
-Every capability listed must be `approved`. Do not set the Owning spec cell: the check records it after specify.
+Every capability listed must be `approved`. Ownership is calculated on read; do not edit a calculated ownership cell.
 
 ## Before plan
 

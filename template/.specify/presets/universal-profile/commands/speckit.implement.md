@@ -19,8 +19,8 @@ These rules come from the Spec Kit Universal Adoption and Execution Profile (sec
 
 After the last task, on the final state of the code:
 
-1. Run every command under "Quality gates" in `plan.md`, complete, not a subset.
-2. Record the run in `FEATURE_DIR/verification.md`. If the file is missing, create it from the `verification-template` (`.specify/scripts/bash/resolve-template.sh verification-template`). Record the tested state, each exact command with its working directory, exit code and counts, and the status of every TR row.
+1. Run every command under "Quality gates" in `plan.md`, complete, not a subset. With the baseline extension, execute `python3 .specify/extensions/baseline/scripts/baseline_check.py --record-run --feature FEATURE_DIR`; this saves `verification-run.json` and hashed logs bound to current inputs.
+2. Record the run in `FEATURE_DIR/verification.md`. If the file is missing, create it from the `verification-template` (`.specify/scripts/bash/resolve-template.sh verification-template`). Record the tested state, each exact command with its working directory, exit code and numeric counts from the recorded run, using its actual log paths, and the status of every TR row.
 3. Use only `PASS`, `FAIL`, `NOT RUN` and `BLOCKED`. Claim `PASS` only from a finished process with its exit status. Move a superseded run under "Historical runs" with its original status; do not relabel it.
 
 ### Converge and complete
@@ -29,6 +29,6 @@ After the last task, on the final state of the code:
 2. Write its outcome on the `Outcome:` line of the "Convergence" section, with the assessment date and the assessed state.
 3. On `tasks_appended` or `gaps_remaining`, do the open work, verify again and converge again. Stop honestly when the work is blocked or outside what was authorized.
 4. Set `Completion: DONE` only when every status is `PASS`, every coverage count is complete, every task is checked, and the outcome is `converged`. Otherwise it stays `NOT DONE`.
-5. When `.specify/extensions/baseline/scripts/baseline_check.py` exists, run it. It rejects a `DONE` that the record does not support: a missing plan or tasks file, an unchecked task, a requirement ID without a passing Coverage row, a non-zero exit code, a failure count, an unresolved evidence link, or an outcome other than `converged`. Fix the record or the work; never reword the record to get past the check.
+5. When `.specify/extensions/baseline/scripts/baseline_check.py` exists, run it with `--write --feature FEATURE_DIR`, then `--gate --require-done --feature FEATURE_DIR`. It rejects a `DONE` that the record does not support: a missing plan or tasks file, an unchecked task, a requirement ID without a passing Coverage row, a non-zero exit code, a failure count, an unresolved evidence link, or an outcome other than `converged`. Fix the record or the work; never reword the record to get past the check.
 
 {CORE_TEMPLATE}

@@ -21,17 +21,16 @@ Rules that every feature must respect.
 ## Capabilities
 
 One row per promise that can be delivered on its own. A promise built in two steps is two rows.
-Each row has one owning spec; a change to the promise amends that spec.
+Each capability has one implementing spec. A later change uses a separate Changes spec,
+with a frozen transition from the predecessor's accepted promise to the new promise.
 
 - **Decision** is typed here: `proposed`, `approved`, `superseded`, or `retired`. Rows are never deleted.
 - **Depends on** lists the capabilities that must be verified first, or `-`.
-- **Owning spec** and **Delivery** are never typed. The baseline check script calculates them: the
-  owner is the spec that implements the capability, and Delivery is `unstarted`, `in progress`, or
-  `verified` from the `verification.md` of that spec and of every spec that changes the capability.
+- Ownership and delivery are calculated on read: run the baseline checker with `--status`.
 
-| ID | Promise | Decision | Depends on | Owning spec | Delivery |
-|----|---------|----------|------------|-------------|----------|
-| CAP-001 | [One line the user would recognise.] | proposed | - | - | unstarted |
+| ID | Promise | Decision | Depends on |
+|----|---------|----------|------------|
+| CAP-001 | [One line the user would recognise.] | proposed | - |
 
 ## Open questions
 

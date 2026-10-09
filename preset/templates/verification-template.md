@@ -1,13 +1,17 @@
 # Verification: <feature>
 
 Constitution: <actual version>
-Profile: Spec Kit Universal Adoption and Execution Profile 2.3.0
+Profile: Spec Kit Universal Adoption and Execution Profile 3.0.0
 Completion: NOT DONE
 Tested revision / relevant working-tree fingerprint: <actual value>
 Run date/time and timezone: <actual run time>
 Environment: <locks/toolchain/services/config identity without secrets>
 Platforms: <browser/device/emulator, OS/API/runtime versions>
 Evidence root: <repository-owned path>
+
+<!-- Run baseline_check.py --record-run --feature FEATURE_DIR on final inputs.
+Use verification-run.json commands and actual hashed log paths below. Do not
+renew evidence by editing this report. Required skips/xfails remain blockers. -->
 
 ## Coverage
 

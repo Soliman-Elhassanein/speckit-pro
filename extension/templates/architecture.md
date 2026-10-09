@@ -19,12 +19,17 @@ Choices only. Exact versions live in the lockfiles.
 Each part, what it owns, where its code lives, and what it may depend on. **Paths** are folders,
 files or globs, comma separated; a root file or a hidden folder that is product code belongs here
 too. The check script uses them to notice code that changed outside the process and code that no
-part maps. **State** is never typed after the row is added: a new part starts `planned`, and the
-check script sets `built` once its paths hold code.
+part maps. Part state is calculated on read: planned until its paths hold code.
+Keep the Tooling row only for paths the project uses; add hidden CI/deployment folders explicitly.
 
-| Part | Owns | Paths | May depend on | State |
-|------|------|-------|---------------|-------|
-| [Name] | [Data, rule or responsibility it is the one authority for] | [src/name] | [Parts] | planned |
+| Part | Owns | Paths | May depend on |
+|------|------|-------|---------------|
+| Tooling | Build, dependency and test configuration | package*.json, *lock*, tsconfig*.json, pyproject.toml, requirements*.txt, Dockerfile*, Makefile, tests, scripts | - |
+| [Name] | [Data, rule or responsibility it is the one authority for] | [src/name] | [Parts] |
+
+**Verification inputs**: Tooling
+
+Parts listed here affect every feature's test binding (for example locks and build/test configuration).
 
 **Not code**: specs, docs, *.md, LICENSE*
 

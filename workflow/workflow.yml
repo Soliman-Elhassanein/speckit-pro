@@ -2,7 +2,7 @@ schema_version: "1.0"
 workflow:
   id: "speckit-pro"
   name: "speckit-pro Cycle"
-  version: "1.1.0"
+  version: "1.2.0"
   author: "Soliman-Elhassanein"
   description: "Runs specify → clarify → plan → tasks → analyze → baseline check → implement → converge with review gates"
 
@@ -69,10 +69,10 @@ steps:
     on_reject: abort
 
   # A deterministic gate: it does not depend on an agent following a prompt.
-  # It passes with a note in a project that has no baseline.
+  # Requires an adopted baseline; advisory mode cannot weaken this gate.
   - id: baseline-gate
     type: shell
-    run: "python3 .specify/extensions/baseline/scripts/baseline_check.py --run-rule-checks"
+    run: "python3 .specify/extensions/baseline/scripts/baseline_check.py --gate --feature current"
 
   # Implement verifies on the final state and runs converge itself. This last
   # step is an independent pass over the result; it does not repair. When it
@@ -88,3 +88,8 @@ steps:
     integration: "{{ inputs.integration }}"
     input:
       args: "{{ inputs.spec }}"
+
+  # Independently validate the final code and completion after all agent steps.
+  - id: final-baseline-gate
+    type: shell
+    run: "python3 .specify/extensions/baseline/scripts/baseline_check.py --gate --require-done --feature current"

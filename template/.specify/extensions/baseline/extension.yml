@@ -3,7 +3,7 @@ schema_version: "1.0"
 extension:
   id: baseline
   name: "Project Baseline"
-  version: "0.5.0"
+  version: "0.6.0"
   description: "Project memory beside the constitution: product.md (what), architecture.md (how), decisions.md (why). Read before specify and plan, changed only with approval, and checked by a script."
   category: "process"
   effect: "read-write"
@@ -23,7 +23,7 @@ provides:
       description: "Before specify or plan: pick the path for the request, load the relevant baseline entries, and put conflicts to the user"
     - name: speckit.baseline.check
       file: commands/speckit.baseline.check.md
-      description: "Run the deterministic baseline check and write the calculated cells"
+      description: "Validate baseline pins and current evidence; calculate status on read"
     - name: speckit.baseline.review
       file: commands/speckit.baseline.review.md
       description: "Before converge: review the finished code against the architecture rules and boundaries, and turn violations into tasks"
@@ -36,6 +36,7 @@ provides:
 
 hooks:
   before_specify:
+    priority: 1
     command: speckit.baseline.context
     optional: false
     description: "Choose the path for this request and load the product baseline"

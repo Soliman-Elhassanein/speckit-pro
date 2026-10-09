@@ -1,11 +1,8 @@
 {
-  "schema_version": "1.0",
   "extensions": {
     "baseline": {
-      "version": "0.5.0",
-      "source": "local",
-      "manifest_hash": "sha256:a69b4d38a0b250a77346a39f79c2935e78b16ff16082207c8de75917ee3497d1",
       "enabled": true,
+      "manifest_hash": "sha256:af45b6457006ef59edc4ee860802cc58591aa78583824b8656b2a13ce39db795",
       "priority": 10,
       "registered_commands": {
         "codex": [
@@ -18,7 +15,9 @@
         ]
       },
       "registered_skills": [],
-      "installed_at": "2026-10-09T15:37:08.485909+00:00"
+      "source": "local",
+      "version": "0.6.0"
     }
-  }
+  },
+  "schema_version": "1.0"
 }

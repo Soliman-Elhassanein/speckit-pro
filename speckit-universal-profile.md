@@ -1,6 +1,6 @@
 # Spec Kit Universal Adoption and Execution Profile
 
-- **Profile version:** 2.3.0
+- **Profile version:** 3.0.0
 - **Prepared:** 2026-10-08
 - **Applies to:** new or existing projects, at any phase, in any supported agent integration.
 - **Intent:** a complete, auditable instruction for upgrading project governance, installed Spec Kit skills/commands, templates, execution discipline, testing, evidence, and completion.
@@ -318,23 +318,23 @@ A feature folder under `specs/` remains one change with its proof. Four laws gov
 
 1. One home per fact. Everything else links to it.
 2. Calculate, do not maintain. A script derives each capability's owning spec and delivery state, and each part's state, from the specs, their `verification.md` and the code, and checks IDs and links.
-3. The agent proposes; the user approves. Only the baseline amend command edits what the three baseline files mean; the script writes only the cells it calculates. Code never becomes correct because a baseline file was edited to match it.
+3. The agent proposes; the user approves. Only the baseline amend command edits what the three baseline files mean; the script persists only pins, run evidence and synchronization records. Code never becomes correct because a baseline file was edited to match it.
 4. Process weight follows change size. A new behavior takes the full path; a bug fix and a behavior-preserving change take shorter ones and create no spec.
 
-The check script also guards the baseline against drift:
+The check script guards the baseline against drift:
 
-- **Citations and pins.** A spec or plan cites the baseline only on its header lines (`**Implements**`, `**Changes**`, `**Product rules**`, `**Architecture rules**`, `**Decisions**`, `**Parts**`). Each cited entry, each listed part and the stack are pinned by content, per file. If one changes while that work is unfinished, the check fails until that file is re-read and re-pinned. A capability that changes after its feature was verified is reported too.
-- **One owner, later changes.** One spec implements a capability. A later spec that changes its behavior lists it under `**Changes**:`, and the capability is `verified` only while its owner and every spec that changes it are done.
-- **Supported completion.** `Completion: DONE` in a `verification.md` is a claim. The check rejects it, and the capability stays `in progress`, unless the plan and tasks exist with every task checked, every FR, AS and TR ID of the spec has a passing Coverage row, every recorded command has exit code 0 and no failure count, no row outside the historical runs is open, failed or skipped, every evidence link resolves, and the convergence Outcome is `converged`. A spec or plan that changes after that, without a new recorded run, loses the status.
-- **Open questions and dependencies.** A capability named in the Blocks cell of an open question cannot be specified. A capability may list the capabilities it depends on; the check rejects cycles and warns when work starts before a dependency is verified.
-- **Code map.** Each part in `architecture.md` names its paths, root files and hidden folders included. A part starts `planned` and needs no code; the script marks it `built` when its paths hold code. Each part has its own synced point, a hash of its content, so it survives a squash or a rebase. Code in a part that changed since then is reported for the reconcile command unless an unfinished feature lists that part; code no part maps is reported too.
-- **Rule checks.** An architecture rule may carry a command that exits non-zero when the rule is broken, and a Blocking flag. Before converge, the review command checks the changed code against every rule and boundary and appends violations as tasks, so a feature cannot be marked done over them.
-- **Exact context.** The script prints what a step needs and no more: before specify, the purpose, the capabilities by ID, the product rules, the product decisions and the open questions; before plan, the stack, the parts, the rules, the decisions governing the touched paths (rejected options included) and the contracts.
-- **Analysis.** Before analyze, the check runs read-only and its errors enter the analysis as critical findings. With the preset installed, analyze also compares the spec with its capabilities and the plan with the parts, rules and decisions it touches, before any code is written.
-- **No agent as a contributor.** A `commit-msg` hook, installed by `.specify/extensions/baseline/scripts/install-git-hooks.sh`, rejects a commit whose message, author or committer names a coding agent, under [section 10](#10-local-version-control). The check warns about any such commit made since the last synced point.
-- **History.** A deleted baseline row is an error; a rewritten decision is a warning. Finished work stays valid after its capability is retired or superseded.
-- **Safe writes and modes.** In blocking mode the script writes nothing when it reports an error. A project with no `product.md` has no baseline and is not blocked. A project that adopts the baseline with code already written starts in advisory mode, where the check reports without stopping work, and switches to blocking once it is clean.
-- **Existing code.** The recover command builds a first baseline from a partition of the tracked files; every proposed row names its evidence, and nothing is approved until the user says so.
+- **Calculated views.** Ownership, delivery and part state are computed on read with `--status` or `--json`. Shared product and architecture rows are never rewritten by the checker; legacy calculated columns are ignored.
+- **Citations and review.** Spec and plan citations are pinned per file. Reviewing changed pins requires `--reason`; a spec edit also requires explicit acknowledgment after reviewing its downstream plan and tasks. A targeted repin can save valid work while unrelated features remain stale.
+- **Revision transitions.** One spec implements a capability. Later `**Changes**:` specs freeze the predecessor's accepted capability revision and the new revision when initially pinned. Subsequent changes name `**Previous change**`. Preserve historical evidence on its original revision; never relabel old tests as proof of a new promise.
+- **Current evidence.** `--record-run --feature <feature>` executes every planned quality gate and saves a typed run ID, input digests, exit codes and hashed local logs. Bindings include spec, plan, task meaning, governing rules and decisions, constitution when present, listed code parts and local contracts. Cosmetic report edits, unfinished neighboring work and reconciliation stamps cannot renew a run.
+- **Supported completion.** DONE requires approved/unblocked capabilities, accepted cited decisions, checked tasks, a verification plan, passing FR/AS/TR coverage, known statuses, complete commands and numeric counts, existing evidence, current run bindings and converged outcome. Required failures, skips and xfails block completion even with a reason. First completion obeys these checks too.
+- **Code map and abandonment.** Map root tooling and hidden product code explicitly. Part state is derived from matching files; synchronization uses independent per-part records. An unfinished feature only excuses reconciliation warnings for listed parts. Inactive unfinished work is reported; `Completion: ABANDONED` provides no drift exemption. Scoped stamping requires supported DONE; global changed-code stamps require a reason.
+- **Mandatory gates.** `--gate` is read-only, ignores advisory weakening, requires a baseline and accepted history base, and executes architecture-rule commands with pipeline failure handling, time and output limits. Workflow gates explicitly scope the current feature; global CI checks all features. A final workflow gate requires current DONE after implementation and convergence.
+- **Context and review.** Missing/duplicate entries and malformed tables make context fail visibly. Local linked contracts are loaded with a size limit; oversized or external references must be read explicitly. Analyze and converge still judge semantics and append remediation tasks.
+- **History.** Compare against an explicit accepted or PR-base revision and HEAD, with full Git history. Deleted accepted IDs and rewritten decision text fail. Retire capabilities or add superseding decision rows. Finished historical work remains valid on its original revision after retirement or a recorded transition.
+- **Safe writes and recovery.** Per-feature evidence and pins, per-part stamps and initial adoption/mode use a checkout lock, compare-before-apply and recoverable journal. Invalid completion cannot be accepted in advisory mode. A missing adopted baseline fails; only non-adopter discovery is permissive. Required gates never treat absence as success.
+- **Local version control.** The installer adds structural pre-commit and attribution commit-msg hooks while preserving foreign hooks. Local hooks are bypassable; CI and repository branch settings provide independent enforcement.
+- **Existing code.** Recovery initializes advisory diagnostics before creating the baseline. Proposed rows require repository evidence and user approval. Adoption records an explicit accepted history base.
 
 The script judges structure, not meaning: it can show that a record is incomplete or inconsistent, never that an assertion is adequate. Analyze, converge and the user's review still judge that.
 
@@ -405,7 +405,7 @@ Freeze the final relevant state for verification, review the staged diff, and co
 # Verification: <feature>
 
 Constitution: <actual version>
-Profile: Spec Kit Universal Adoption and Execution Profile 2.3.0
+Profile: Spec Kit Universal Adoption and Execution Profile 3.0.0
 Completion: NOT DONE
 Tested revision / relevant working-tree fingerprint: <actual value>
 Run date/time and timezone: <actual run time>
