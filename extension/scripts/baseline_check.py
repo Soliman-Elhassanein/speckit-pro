@@ -33,6 +33,11 @@ ID_RE = re.compile(r"\b(?:CAP|PR|AR|D)-\d{3,}\b")
 DEFINED_RE = re.compile(r"^(?:CAP|PR|AR|D)-\d{3,}$")
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 COMPLETION_RE = re.compile(r"^Completion:\s*(NOT DONE|DONE)\b", re.MULTILINE)
+OUTCOME_RE = re.compile(r"^Outcome:\s*`?(NOT RUN|[a-z_]+)", re.MULTILINE)
+OPEN_STATUS_RE = re.compile(r"^(?:NOT RUN|FAIL|BLOCKED)\b")
+COUNT_RE = re.compile(r"^[^|\n]*:\s*(\d+)\s*/\s*(\d+)\s*$", re.MULTILINE)
+OPEN_TASK_RE = re.compile(r"^\s*[-*]\s+\[ \]", re.MULTILINE)
+HISTORY_RE = re.compile(r"^## Historical runs\b", re.MULTILINE)
 BASELINE_LINE_RE = re.compile(r"^\*\*Baseline\*\*:\s*`?([0-9a-fA-F]{7,40})`?", re.MULTILINE)
 DECISION_STATES = {"proposed", "approved", "superseded", "retired"}
 BASELINE_FILES = ("product.md", "architecture.md", "decisions.md")
@@ -179,6 +184,28 @@ class Baseline:
     def line(self, ident: str) -> str:
         entry = self.entries[ident]
         return "| " + " | ".join(entry["row"]) + " |"
+
+
+def done_gaps(spec_dir: Path) -> list[str]:
+    """Why the feature's own records do not support a `Completion: DONE` claim."""
+    current = HISTORY_RE.split((spec_dir / "verification.md").read_text(encoding="utf-8"), maxsplit=1)[0]
+    gaps = []
+    open_rows = sum(
+        1 for _, _, row in table_rows(current) if any(OPEN_STATUS_RE.match(cell.strip("`* ")) for cell in row)
+    )
+    if open_rows:
+        gaps.append(f"{open_rows} row(s) are NOT RUN, FAIL or BLOCKED")
+    short = [found.group(0).strip() for found in COUNT_RE.finditer(current) if found.group(1) != found.group(2)]
+    if short:
+        gaps.append("coverage is incomplete (" + "; ".join(short) + ")")
+    outcome = OUTCOME_RE.search(current)
+    if not outcome or outcome.group(1) != "converged":
+        gaps.append(f"the convergence Outcome is '{outcome.group(1) if outcome else 'missing'}', not 'converged'")
+    tasks = spec_dir / "tasks.md"
+    unchecked = len(OPEN_TASK_RE.findall(tasks.read_text(encoding="utf-8"))) if tasks.is_file() else 0
+    if unchecked:
+        gaps.append(f"tasks.md has {unchecked} unchecked task(s)")
+    return gaps
 
 
 def load_state(memory: Path) -> dict:
@@ -366,6 +393,11 @@ def main() -> int:
         verification = spec_dir / "verification.md"
         completion = COMPLETION_RE.search(verification.read_text(encoding="utf-8")) if verification.is_file() else None
         done = bool(completion and completion.group(1) == "DONE")
+        if done:
+            gaps = done_gaps(spec_dir)
+            if gaps:
+                errors.append(f"specs/{spec_dir.name}/verification.md: says Completion: DONE, but " + "; ".join(gaps))
+                done = False
         if not done:
             in_progress.append(spec_dir.name)
         for doc in ("spec.md", "plan.md"):

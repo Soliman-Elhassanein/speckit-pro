@@ -65,9 +65,14 @@ Do these in order.
    Show me the rows before writing them, as those skills require. Finish with:
      python3 .specify/extensions/baseline/scripts/baseline_check.py --write --stamp
 
-10. Follow the adoption transaction in section 2 of the standard: synchronize
-    the templates in .specify/templates and every skill. In each stock
-    SKILL.md, add one short section that tells the reader to read
+10. Follow the adoption transaction in section 2 of the standard. The
+    specify, plan, tasks, analyze, implement and converge skills already carry
+    the standard's rules under the heading "Universal profile rules", and the
+    spec, plan and tasks templates already gain its sections from
+    .specify/presets/universal-profile/templates/. Confirm both and record
+    them in the adoption report. Do not edit those skills or templates. In
+    each remaining stock SKILL.md (constitution, clarify, checklist,
+    taskstoissues), add one short section that tells the reader to read
     .agents/skills/speckit-standard.md before acting and names the sections
     that govern that command. Point to the standard; do not copy its rule
     text. Keep each file's frontmatter and existing steps intact.

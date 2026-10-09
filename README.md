@@ -25,9 +25,9 @@ To update a machine later: `git -C ~/.speckit-plus pull`.
 
 | Path in the project | What it is |
 |---|---|
-| `.agents/skills/speckit-*/` | The ten Spec Kit commands, with converge made evidence-aware, plus six baseline commands |
+| `.agents/skills/speckit-*/` | The ten Spec Kit commands, six of them carrying the standard's rules, plus six baseline commands |
 | `.agents/skills/speckit-standard.md` | The standard every command follows |
-| `.specify/` | Spec Kit's scripts, templates, workflow and hooks |
+| `.specify/` | Spec Kit's scripts, templates and hooks, the standard's template sections, and the `speckit-plus` workflow |
 | `.specify/extensions/baseline/` | Templates and the check script for the project baseline |
 | `.specify/speckit-plus/` | Optional modules and the adoption prompt |
 
@@ -59,8 +59,9 @@ The full rules are in [speckit-universal-profile.md](speckit-universal-profile.m
 |---|---|
 | [speckit-universal-profile.md](speckit-universal-profile.md) | The standard |
 | [modules/](modules/) | Optional rule sets for specific kinds of product |
-| [preset/](preset/) | Converge rules, as a Spec Kit preset and a script |
+| [preset/](preset/) | The standard's command rules and template sections, as a Spec Kit preset |
 | [extension/](extension/) | The project baseline, as a Spec Kit extension |
+| [workflow/](workflow/) | The full cycle with review gates, as a Spec Kit workflow |
 | [template/](template/) | The ready-made installation that `install.sh` copies. Generated; do not edit by hand. |
 | [install.sh](install.sh) | The installer |
 | [scripts/build-template.sh](scripts/build-template.sh) | Rebuilds `template/` from the pinned Spec Kit release |
@@ -68,7 +69,7 @@ The full rules are in [speckit-universal-profile.md](speckit-universal-profile.m
 
 ## Maintaining it
 
-After changing `preset/` or `extension/`, or to move to a newer Spec Kit release (edit the [SPECKIT_VERSION](SPECKIT_VERSION) file first, and add a row to the table below):
+After changing `preset/`, `extension/` or `workflow/`, or to move to a newer Spec Kit release (edit the [SPECKIT_VERSION](SPECKIT_VERSION) file first, and add a row to the table below):
 
 ```sh
 sh scripts/build-template.sh

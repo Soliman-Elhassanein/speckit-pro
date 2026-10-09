@@ -1,9 +1,9 @@
 #!/bin/sh
 # Rebuild template/ : a complete, ready-to-copy Spec Kit installation with the
-# speckit-plus converge preset and baseline extension already applied.
+# speckit-plus preset, baseline extension and workflow already applied.
 #
 # Needs the Spec Kit CLI named in the SPECKIT_VERSION file on PATH. Run it after
-# changing preset/ or extension/, or when moving to a newer Spec Kit release.
+# changing preset/, extension/ or workflow/, or when moving to a newer Spec Kit release.
 set -eu
 
 repo=$(cd "$(dirname "$0")/.." && pwd)
@@ -23,6 +23,10 @@ specify init --here --force --integration codex --integration-options="--skills"
     --script sh --ignore-agent-tools >/dev/null
 specify preset add --dev "$repo/preset" >/dev/null
 specify extension add --dev "$repo/extension" >/dev/null
+specify workflow add --dev "$repo/workflow" >/dev/null
+# The workflow registry records where a local workflow came from; keep this machine's path out.
+sed "s|$repo/workflow|speckit-plus|" .specify/workflows/workflow-registry.json > registry.tmp
+mv registry.tmp .specify/workflows/workflow-registry.json
 
 # Catalog caches are downloaded data, not part of the installation.
 rm -rf .specify/extensions/.cache .specify/integrations/.cache .specify/presets/.cache

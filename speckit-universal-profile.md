@@ -1,6 +1,6 @@
 # Spec Kit Universal Adoption and Execution Profile
 
-- **Profile version:** 2.0.0
+- **Profile version:** 2.1.0
 - **Prepared:** 2026-10-08
 - **Applies to:** new or existing projects, at any phase, in any supported agent integration.
 - **Intent:** a complete, auditable instruction for upgrading project governance, installed Spec Kit skills/commands, templates, execution discipline, testing, evidence, and completion.
@@ -21,7 +21,8 @@ Adoption and application completion are separate conclusions. Adopting this prof
 |---|---|
 | `speckit-universal-profile.md` (this file) | Always. The complete core rules. |
 | [modules/](modules/) | One file per product module. Read and apply only those that [section 12](#12-optional-modules) marks applicable. |
-| [preset/](preset/) | The converge rules of [section 5.9](#59-speckit-converge), with a script and a Spec Kit preset to install them. |
+| [preset/](preset/) | The command rules of [sections 5.3 and 5.5 to 5.9](#51-integration-contract) and the template sections of [section 4.2](#42-feature-artifacts), as a Spec Kit preset. |
+| [workflow/](workflow/) | The lifecycle of [section 5.11](#511-workflow-and-repair-handoff), as a Spec Kit workflow. |
 | [extension/](extension/) | Spec Kit extension that adds the project baseline of [section 5.12](#512-project-baseline). |
 | [template/](template/) and [install.sh](install.sh) | A complete Spec Kit installation with the preset and extension applied, and the installer that copies it into a project. |
 | [adoption-prompt.md](adoption-prompt.md) | Paste-ready prompt that makes an agent adopt this profile in a project where `install.sh` has run. |
@@ -244,6 +245,8 @@ Read assertions when auditing coverage. A matching marker, test name, or matrix 
 - If a required capability is absent, use the supported local customization/installation mechanism within authorization, or provide the exact equivalent agent instruction and record the blocker. Do not falsely claim that a native command exists or is installed.
 - Retain authorized optional external integrations, such as task conversion, without making them gates; retire active dependencies on them where they conflict with the locally authoritative model. Preserve historical links as provenance.
 
+This standard ships its own rules for specify, plan, tasks, analyze, implement and converge as the preset in [preset/](preset/). The preset wraps each stock command with the rules, adds the sections of [section 4.2](#42-feature-artifacts) to the spec, plan and tasks templates, and adds the `verification-template` of [section 7.3](#73-required-verification-template). Install it from the target project root with `specify preset add --dev <path-to-this-standard>/preset`. Where it is installed, do not also copy the rules into the skills by hand.
+
 ### 5.2 `speckit-constitution`
 
 Follow the amendment procedure in [section 3](#3-amend-the-constitution). Propagate to all templates, active skills/commands, runtime guidance, workflows, and affected docs. Commit the coherent governance unit.
@@ -276,7 +279,7 @@ Read intent, design, tasks, and evidence together. Establish the baseline, searc
 
 Converge compares current implementation, meaningful assertions, and current evidence against spec/plan/tasks. Its only allowed file mutation is appending deduplicated remediation tasks to `tasks.md`, and it reports exactly one of `tasks_appended`, `gaps_remaining`, or `converged`. No new tasks is not equivalent to converged.
 
-The complete rules are shipped once, in [preset/commands/speckit.converge.md](preset/commands/speckit.converge.md). Add them to the converge command of the integration the project already uses, from the target project root:
+The complete rules are shipped once, in [preset/commands/speckit.converge.md](preset/commands/speckit.converge.md). The preset installs them with the other commands. The script below adds the converge rules alone, for an integration the preset does not reach:
 
 ```sh
 # generic integration with a custom commands directory, such as .agent/commands
@@ -286,7 +289,7 @@ sh <path-to-this-standard>/preset/apply-converge.sh .agent/commands/speckit.conv
 specify preset add --dev <path-to-this-standard>/preset
 ```
 
-The script inserts the rules into the installed Markdown command and is safe to run again; `specify integration status` then reports that file as a modified managed file, which is the expected customization. Both routes were re-verified on specify-cli 1.1.2. The preset wraps the stock command and was verified on specify-cli 0.13.3 with the Claude, Codex (skills), Gemini, Copilot, OpenCode, and Cursor integrations; it does not reach the `generic` integration. Removing the preset deletes the composed command; restore the stock one with `specify integration upgrade <integration>`.
+The script inserts the rules into the installed Markdown command and is safe to run again; `specify integration status` then reports that file as a modified managed file, which is the expected customization. Both routes were re-verified on specify-cli 1.1.2. Preset 2.0.0, which held only converge, was verified on specify-cli 0.13.3 with the Claude, Codex (skills), Gemini, Copilot, OpenCode, and Cursor integrations. Preset 2.1.0 needs specify-cli 1.1.0 or later and was verified on 1.1.2 with the Codex (skills) layout. The preset does not reach the `generic` integration. Removing the preset deletes the composed command; restore the stock one with `specify integration upgrade <integration>`.
 
 ### 5.10 `speckit-checklist`
 
@@ -295,6 +298,8 @@ Validate written requirements only, under the `checklists/*.md` contract of [sec
 ### 5.11 Workflow and repair handoff
 
 The lifecycle is specify → review/clarify → plan → review → tasks → analyze → implement → verify → converge. Existing-feature entry follows [section 1.2](#12-start-from-the-phase-that-exists). When verification fails or convergence finds work, return to implementation, rerun affected/full verification, and converge again.
+
+The lifecycle is shipped as the workflow in [workflow/](workflow/), installed with `specify workflow add --dev <path-to-this-standard>/workflow` and run as `speckit-plus`. It is linear with review gates: it does not repeat the repair loop on its own.
 
 If the workflow engine cannot express a repair loop, stop with an honest NOT DONE result and print the exact supported implement/verify/converge invocations and feature selection. Do not declare success simply because implementation ended. Preserve the same feature directory; use `SPECIFY_FEATURE_DIRECTORY` only if supported by that installation, otherwise its verified selection mechanism.
 
@@ -322,6 +327,8 @@ The check script also guards the baseline against drift:
 - **Code map.** Each part in `architecture.md` names its paths. Mapped code that changes with no feature in progress is reported for the reconcile command; code no part maps and paths that match nothing are reported too.
 - **Rule checks.** An architecture rule may carry a command that exits non-zero when the rule is broken, and a Blocking flag. After implement, the review command checks the changed code against every rule and boundary and appends violations as tasks.
 - **Exact context.** The script prints only the entries a piece of work needs: capabilities by ID before specify; parts, rules, and the decisions governing the touched paths before plan, rejected options included.
+- **Analysis.** Before analyze, the check runs read-only and its errors enter the analysis as critical findings. With the preset installed, analyze also compares the spec with its capabilities and the plan with the parts, rules and decisions it touches, before any code is written.
+- **Supported completion.** `Completion: DONE` in a `verification.md` is a claim. The check rejects it, and the capability stays `in progress`, while that record has a row that is NOT RUN, FAIL or BLOCKED outside its historical runs, an incomplete coverage count, or a convergence Outcome other than `converged`, or while `tasks.md` has an unchecked task.
 - **Existing code.** The recover command builds a first baseline from a partition of the tracked files; every proposed row names its evidence, and nothing is approved until the user says so.
 
 The commands, templates, hooks, and check script are shipped in [extension/](extension/). Install them from the target project root:
@@ -391,7 +398,7 @@ Freeze the final relevant state for verification, review the staged diff, and co
 # Verification: <feature>
 
 Constitution: <actual version>
-Profile: Spec Kit Universal Adoption and Execution Profile 2.0.0
+Profile: Spec Kit Universal Adoption and Execution Profile 2.1.0
 Completion: NOT DONE
 Tested revision / relevant working-tree fingerprint: <actual value>
 Run date/time and timezone: <actual run time>
@@ -436,15 +443,17 @@ blocked prerequisites, and feature-qualified remediation task IDs.>
 
 ## Convergence
 
-<Actual assessment date and fingerprint; exactly one of tasks_appended,
-gaps_remaining, converged; findings and task IDs. Initially NOT RUN.>
+Outcome: NOT RUN
+
+<Actual assessment date and fingerprint, findings and task IDs. The Outcome
+line holds exactly one of NOT RUN, tasks_appended, gaps_remaining, converged.>
 
 ## Historical runs
 
 <Retain prior runs with their original tested states and limitations.>
 ```
 
-Resolve template placeholders when creating concrete records. Do not require an unobserved check to PASS because the template expects a result.
+The preset ships this template as `verification-template`; the plan command creates the record from it and the implement command fills it. Resolve template placeholders when creating concrete records. Do not require an unobserved check to PASS because the template expects a result.
 
 ### 7.4 Retention and sanitization
 

@@ -19,8 +19,9 @@ This command runs a script. The script decides; do not replace its result with y
 | When | Run | Why |
 |------|-----|-----|
 | After specify, after plan | `CHECK --repin <spec folder>` | Pins each baseline entry the new file cites, so a later change to that entry is noticed. |
+| Before analyze | `CHECK` | Read-only. Its errors go into the analysis as critical findings. |
 | Before implement | `CHECK --run-rule-checks` | Stops implementation while anything is wrong. |
-| After converge | `CHECK --write`; add `--stamp` when the outcome was `converged` | Recalculates Delivery; the stamp records that code and baseline agree. |
+| After converge, and again after the outcome is recorded in `verification.md` | `CHECK --write`; add `--stamp` when the outcome was `converged` | Recalculates Delivery; the stamp records that code and baseline agree. |
 | On request | `CHECK` | Read-only. |
 
 ## What it checks
@@ -34,6 +35,7 @@ This command runs a script. The script decides; do not replace its result with y
 - **Rule checks**: with `--run-rule-checks`, each architecture rule's Check command. A failing rule marked Blocking is an error; any other is a warning.
 - Links inside the three baseline files resolve.
 - The Delivery column matches the owning spec's `verification.md`: `verified` only when it says `Completion: DONE`.
+- **Unsupported DONE**: `Completion: DONE` is an error, and the capability stays `in progress`, while the same file has a row that is `NOT RUN`, `FAIL` or `BLOCKED` outside "Historical runs", a coverage count that is not complete, or a convergence `Outcome:` other than `converged`, or while `tasks.md` has an unchecked task.
 
 `--strict` turns warnings into errors.
 

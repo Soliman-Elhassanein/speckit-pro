@@ -3,7 +3,7 @@ schema_version: "1.0"
 extension:
   id: baseline
   name: "Project Baseline"
-  version: "0.2.0"
+  version: "0.3.0"
   description: "Project memory beside the constitution: product.md (what), architecture.md (how), decisions.md (why). Read before specify and plan, changed only with approval, and checked by a script."
   category: "process"
   effect: "read-write"
@@ -51,6 +51,10 @@ hooks:
     command: speckit.baseline.check
     optional: false
     description: "Pin the baseline entries the new plan cites"
+  before_analyze:
+    command: speckit.baseline.check
+    optional: false
+    description: "Check the baseline before the spec, plan and tasks are analyzed against it"
   before_implement:
     command: speckit.baseline.check
     optional: false

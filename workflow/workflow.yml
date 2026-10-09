@@ -1,0 +1,84 @@
+schema_version: "1.0"
+workflow:
+  id: "speckit-plus"
+  name: "speckit-plus Cycle"
+  version: "1.0.0"
+  author: "Soliman-Elhassanein"
+  description: "Runs specify → clarify → plan → tasks → analyze → implement → converge with review gates"
+
+requires:
+  speckit_version: ">=1.1.0"
+
+inputs:
+  spec:
+    type: string
+    required: true
+    prompt: "Describe what you want to build"
+  integration:
+    type: string
+    default: "auto"
+    prompt: "Integration to use ('auto' uses the project's initialized integration)"
+
+steps:
+  - id: specify
+    command: speckit.specify
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "{{ inputs.spec }}"
+
+  - id: clarify
+    command: speckit.clarify
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "{{ inputs.spec }}"
+
+  - id: review-spec
+    type: gate
+    message: "Review the clarified spec and its verification matrix before planning."
+    options: [approve, reject]
+    on_reject: abort
+
+  - id: plan
+    command: speckit.plan
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "{{ inputs.spec }}"
+
+  - id: review-plan
+    type: gate
+    message: "Review the plan, its architecture impact and its verification plan before generating tasks."
+    options: [approve, reject]
+    on_reject: abort
+
+  - id: tasks
+    command: speckit.tasks
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "{{ inputs.spec }}"
+
+  - id: analyze
+    command: speckit.analyze
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "{{ inputs.spec }}"
+
+  - id: review-analysis
+    type: gate
+    message: "Implementation starts only when the analysis has no critical finding. Approve to implement."
+    options: [approve, reject]
+    on_reject: abort
+
+  # Implement verifies on the final state and runs converge itself. This last
+  # step is an independent pass over the result; it does not repair. When it
+  # reports tasks_appended or gaps_remaining, run implement and converge again.
+  - id: implement
+    command: speckit.implement
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "{{ inputs.spec }}"
+
+  - id: converge
+    command: speckit.converge
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "{{ inputs.spec }}"

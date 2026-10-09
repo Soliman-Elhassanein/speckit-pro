@@ -39,6 +39,16 @@ hooks:
     prompt: Execute speckit.baseline.check?
     description: Pin the baseline entries the new plan cites
     condition: null
+  before_analyze:
+  - extension: baseline
+    command: speckit.baseline.check
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute speckit.baseline.check?
+    description: Check the baseline before the spec, plan and tasks are analyzed against
+      it
+    condition: null
   before_implement:
   - extension: baseline
     command: speckit.baseline.check
