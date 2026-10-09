@@ -1,7 +1,7 @@
 schema_version: "1.0"
 workflow:
-  id: "speckit-plus"
-  name: "speckit-plus Cycle"
+  id: "speckit-pro"
+  name: "speckit-pro Cycle"
   version: "1.0.0"
   author: "Soliman-Elhassanein"
   description: "Runs specify → clarify → plan → tasks → analyze → implement → converge with review gates"

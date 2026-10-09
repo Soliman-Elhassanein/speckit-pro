@@ -299,7 +299,7 @@ Validate written requirements only, under the `checklists/*.md` contract of [sec
 
 The lifecycle is specify → review/clarify → plan → review → tasks → analyze → implement → verify → converge. Existing-feature entry follows [section 1.2](#12-start-from-the-phase-that-exists). When verification fails or convergence finds work, return to implementation, rerun affected/full verification, and converge again.
 
-The lifecycle is shipped as the workflow in [workflow/](workflow/), installed with `specify workflow add --dev <path-to-this-standard>/workflow` and run as `speckit-plus`. It is linear with review gates: it does not repeat the repair loop on its own.
+The lifecycle is shipped as the workflow in [workflow/](workflow/), installed with `specify workflow add --dev <path-to-this-standard>/workflow` and run as `speckit-pro`. It is linear with review gates: it does not repeat the repair loop on its own.
 
 If the workflow engine cannot express a repair loop, stop with an honest NOT DONE result and print the exact supported implement/verify/converge invocations and feature selection. Do not declare success simply because implementation ended. Preserve the same feature directory; use `SPECIFY_FEATURE_DIRECTORY` only if supported by that installation, otherwise its verified selection mechanism.
 

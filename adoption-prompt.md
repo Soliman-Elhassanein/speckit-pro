@@ -3,13 +3,13 @@
 Run `install.sh` on the project first. Then paste the block below into a coding agent opened in the project's root folder. Nothing needs filling in: every path is inside the project.
 
 ```text
-Adopt the speckit-plus standard in this project. Its files are already
+Adopt the speckit-pro standard in this project. Its files are already
 installed here:
 
   .agents/skills/speckit-*/SKILL.md      the Spec Kit commands (run one by
                                          reading its file and following it)
   .agents/skills/speckit-standard.md     the standard (core, always applies)
-  .specify/speckit-plus/modules/         optional modules; section 12 of the
+  .specify/speckit-pro/modules/         optional modules; section 12 of the
                                          standard says when each one applies
   .specify/extensions/baseline/          project baseline: commands, templates
                                          and the check script
@@ -33,7 +33,7 @@ Do these in order.
 
 5. Decide which optional modules apply, using section 12 of the standard and
    what you found in step 1. Copy only the applicable ones, byte for byte,
-   from .specify/speckit-plus/modules/ to docs/modules/, and read them. Record
+   from .specify/speckit-pro/modules/ to docs/modules/, and read them. Record
    every module in the adoption report as applicable, naming the sections that
    apply, or as N/A with a concrete reason. If the architecture or platform is
    not chosen yet, mark the modules that depend on it N/A for now and say when

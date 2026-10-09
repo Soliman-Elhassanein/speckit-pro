@@ -1,10 +1,10 @@
 #!/bin/sh
-# speckit-plus installer: put a complete, ready-to-use Spec Kit setup into a project.
+# speckit-pro installer: put a complete, ready-to-use Spec Kit setup into a project.
 #
 # Usage: install.sh [--force] [--with-cli] [PROJECT_DIR]
 #
 #   PROJECT_DIR   project root to install into (default: current folder)
-#   --force       overwrite an existing speckit-plus / Spec Kit installation there
+#   --force       overwrite an existing speckit-pro / Spec Kit installation there
 #   --with-cli    also install the pinned Spec Kit CLI with uv (optional; the
 #                 installed files work without it)
 #
@@ -29,7 +29,7 @@ done
 [ -d "$here/template/.specify" ] || { echo "template/ is missing next to install.sh; run scripts/build-template.sh" >&2; exit 1; }
 [ -d "$target" ] || { echo "not a folder: $target" >&2; exit 1; }
 target=$(cd "$target" && pwd)
-[ "$target" != "$here" ] || { echo "refusing to install speckit-plus into its own folder" >&2; exit 1; }
+[ "$target" != "$here" ] || { echo "refusing to install speckit-pro into its own folder" >&2; exit 1; }
 
 version=$(cat "$here/template/SPECKIT_VERSION")
 
@@ -45,17 +45,17 @@ keep_constitution=0
 [ -f "$target/.specify/memory/constitution.md" ] && keep_constitution=1
 [ "$keep_constitution" -eq 1 ] && cp "$target/.specify/memory/constitution.md" "$target/.specify/memory/constitution.md.keep"
 
-mkdir -p "$target/.agents" "$target/.specify/speckit-plus"
+mkdir -p "$target/.agents" "$target/.specify/speckit-pro"
 cp -R "$here/template/.agents/." "$target/.agents/"
 cp -R "$here/template/.specify/." "$target/.specify/"
 
 [ "$keep_constitution" -eq 1 ] && mv "$target/.specify/memory/constitution.md.keep" "$target/.specify/memory/constitution.md"
 
 cp "$here/speckit-universal-profile.md" "$target/.agents/skills/speckit-standard.md"
-rm -rf "$target/.specify/speckit-plus/modules"
-cp -R "$here/modules" "$target/.specify/speckit-plus/modules"
-cp "$here/adoption-prompt.md" "$target/.specify/speckit-plus/adoption-prompt.md"
-echo "$version" > "$target/.specify/speckit-plus/SPECKIT_VERSION"
+rm -rf "$target/.specify/speckit-pro/modules"
+cp -R "$here/modules" "$target/.specify/speckit-pro/modules"
+cp "$here/adoption-prompt.md" "$target/.specify/speckit-pro/adoption-prompt.md"
+echo "$version" > "$target/.specify/speckit-pro/SPECKIT_VERSION"
 
 if [ "$with_cli" -eq 1 ]; then
     command -v uv >/dev/null 2>&1 || { echo "--with-cli needs uv: https://docs.astral.sh/uv/" >&2; exit 1; }
@@ -64,11 +64,11 @@ fi
 
 skills=$(find "$target/.agents/skills" -name SKILL.md | wc -l | tr -d ' ')
 cat <<EOF
-speckit-plus installed in $target
+speckit-pro installed in $target
   Spec Kit $version, $skills skills in .agents/skills
   standard:  .agents/skills/speckit-standard.md
-  modules:   .specify/speckit-plus/modules/
+  modules:   .specify/speckit-pro/modules/
 
 Next: open your coding agent in that folder and paste the block from
-  .specify/speckit-plus/adoption-prompt.md
+  .specify/speckit-pro/adoption-prompt.md
 EOF

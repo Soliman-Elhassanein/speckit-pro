@@ -1,4 +1,4 @@
-# speckit-plus
+# speckit-pro
 
 A complete [Spec Kit](https://github.com/github/spec-kit) setup with a stricter standard on top: every project keeps its rules, its product, its architecture and its decisions in files, and nothing counts as done without proof.
 
@@ -7,10 +7,10 @@ A complete [Spec Kit](https://github.com/github/spec-kit) setup with a stricter 
 One command, from any machine with Git:
 
 ```sh
-git clone https://github.com/<your-user>/speckit-plus ~/.speckit-plus && ~/.speckit-plus/install.sh /path/to/project
+git clone https://github.com/Soliman-Elhassanein/speckit-pro ~/.speckit-pro && ~/.speckit-pro/install.sh /path/to/project
 ```
 
-That copies a ready-made Spec Kit installation into the project. It needs no Spec Kit CLI and changes nothing outside the project folder. Then open your coding agent in the project and paste the block from `.specify/speckit-plus/adoption-prompt.md`.
+That copies a ready-made Spec Kit installation into the project. It needs no Spec Kit CLI and changes nothing outside the project folder. Then open your coding agent in the project and paste the block from `.specify/speckit-pro/adoption-prompt.md`.
 
 Options:
 
@@ -19,7 +19,7 @@ Options:
 | `--force` | Overwrite an existing installation's commands, scripts and templates. Specs, code, `constitution.md` and the baseline files are kept. |
 | `--with-cli` | Also install the pinned Spec Kit CLI with `uv`. |
 
-To update a machine later: `git -C ~/.speckit-plus pull`.
+To update a machine later: `git -C ~/.speckit-pro pull`.
 
 ## What a project gets
 
@@ -27,9 +27,9 @@ To update a machine later: `git -C ~/.speckit-plus pull`.
 |---|---|
 | `.agents/skills/speckit-*/` | The ten Spec Kit commands, six of them carrying the standard's rules, plus six baseline commands |
 | `.agents/skills/speckit-standard.md` | The standard every command follows |
-| `.specify/` | Spec Kit's scripts, templates and hooks, the standard's template sections, and the `speckit-plus` workflow |
+| `.specify/` | Spec Kit's scripts, templates and hooks, the standard's template sections, and the `speckit-pro` workflow |
 | `.specify/extensions/baseline/` | Templates and the check script for the project baseline |
-| `.specify/speckit-plus/` | Optional modules and the adoption prompt |
+| `.specify/speckit-pro/` | Optional modules and the adoption prompt |
 
 ## How it works
 
