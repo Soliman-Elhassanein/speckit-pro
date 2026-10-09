@@ -2,13 +2,12 @@
 # Rebuild template/ : a complete, ready-to-copy Spec Kit installation with the
 # speckit-plus converge preset and baseline extension already applied.
 #
-# Needs the pinned Spec Kit CLI on PATH (see SPECKIT_VERSION). Run it after
+# Needs the Spec Kit CLI named in the SPECKIT_VERSION file on PATH. Run it after
 # changing preset/ or extension/, or when moving to a newer Spec Kit release.
 set -eu
 
-SPECKIT_VERSION="1.1.2"
-
 repo=$(cd "$(dirname "$0")/.." && pwd)
+SPECKIT_VERSION=$(cat "$repo/SPECKIT_VERSION")
 have=$(specify --version 2>/dev/null | awk '{print $NF}')
 [ "$have" = "$SPECKIT_VERSION" ] || {
     echo "need specify $SPECKIT_VERSION on PATH, found '${have:-none}'" >&2

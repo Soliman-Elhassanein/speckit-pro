@@ -68,13 +68,18 @@ The full rules are in [speckit-universal-profile.md](speckit-universal-profile.m
 
 ## Maintaining it
 
-After changing `preset/` or `extension/`, or to move to a newer Spec Kit release (edit `SPECKIT_VERSION` in the script first):
+After changing `preset/` or `extension/`, or to move to a newer Spec Kit release (edit the [SPECKIT_VERSION](SPECKIT_VERSION) file first, and add a row to the table below):
 
 ```sh
 sh scripts/build-template.sh
 ```
 
-The pinned Spec Kit release is recorded in `template/SPECKIT_VERSION`.
+[SPECKIT_VERSION](SPECKIT_VERSION) holds the Spec Kit release this project was last built and tested with. The build script refuses to run with any other version, and `install.sh` copies the number into each project.
+
+| Spec Kit release | Used from | Notes |
+|---|---|---|
+| 1.1.2 | 2026-10-09 | Current. Preset, extension, installer and both folder layouts verified. |
+| 0.13.3.dev0 | 2026-10-08 | First version of the standard and the converge preset. |
 
 ## Credits
 
