@@ -81,6 +81,9 @@ Four laws:
 
 The full rules are in [speckit-universal-profile.md](speckit-universal-profile.md).
 
+For the original inspiration, design decisions, expected benefits, tradeoffs and
+unimplemented work, read [why speckit-pro is designed this way](docs/design-decisions-and-rationale.md).
+
 ### What is checked by a script, and what is not
 
 The check script is deterministic: plain Python and git, no AI. It rejects `Completion: DONE` unless the feature's records hold together: every requirement ID in the spec has a passing coverage row, every recorded command exited with 0, every task is checked, the evidence links resolve, and convergence was reached. It also catches stale citations, code that changed outside a feature, and deleted history.
@@ -110,6 +113,7 @@ A project that adopts the baseline with code already written starts in advisory 
 | [scripts/build-template.sh](scripts/build-template.sh) | Rebuilds `template/` from the pinned Spec Kit release |
 | [adoption-prompt.md](adoption-prompt.md) | The prompt that makes an agent adopt the standard |
 | [docs/installation-and-adoption-scenarios.md](docs/installation-and-adoption-scenarios.md) | Installation, configuration, integration and use across the four project scenarios |
+| [docs/design-decisions-and-rationale.md](docs/design-decisions-and-rationale.md) | Inspiration, design decisions, benefits, tradeoffs, rejected approaches and deferred work |
 
 ## Maintaining it
 

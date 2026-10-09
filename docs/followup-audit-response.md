@@ -7,6 +7,9 @@ verification, historical authority, reconciliation and semantic review need sepa
 This implementation advances the profile/preset to 3.0.0, baseline extension to 0.6.0,
 and workflow to 1.2.0. It changes the persistence and completion contract.
 
+For the broader inspiration, design tradeoffs and deferred scope, see the
+[design rationale](design-decisions-and-rationale.md).
+
 ## First audit
 
 | Finding | Decision and implementation |
