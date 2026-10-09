@@ -2,7 +2,7 @@
 
 Paste the block below into a coding agent opened in the root folder of the target project. It works for an empty folder, a folder that holds only notes, and a project that already uses Spec Kit.
 
-Nothing needs filling in. If this standard's folder moves, update the path that appears four times in the block.
+Nothing needs filling in. If this standard's folder moves, update the path that appears three times in the block.
 
 ```text
 Set up Spec Kit in this project if it is missing, then adopt my Spec Kit standard.
