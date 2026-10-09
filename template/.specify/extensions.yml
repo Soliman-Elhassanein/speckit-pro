@@ -1,0 +1,68 @@
+installed:
+- baseline
+settings:
+  auto_execute_hooks: true
+hooks:
+  before_specify:
+  - extension: baseline
+    command: speckit.baseline.context
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute speckit.baseline.context?
+    description: Choose the path for this request and load the product baseline
+    condition: null
+  after_specify:
+  - extension: baseline
+    command: speckit.baseline.check
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute speckit.baseline.check?
+    description: Pin the baseline entries the new spec cites
+    condition: null
+  before_plan:
+  - extension: baseline
+    command: speckit.baseline.context
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute speckit.baseline.context?
+    description: Load the architecture baseline and decisions
+    condition: null
+  after_plan:
+  - extension: baseline
+    command: speckit.baseline.check
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute speckit.baseline.check?
+    description: Pin the baseline entries the new plan cites
+    condition: null
+  before_implement:
+  - extension: baseline
+    command: speckit.baseline.check
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute speckit.baseline.check?
+    description: Stop implementation while the baseline check fails
+    condition: null
+  after_implement:
+  - extension: baseline
+    command: speckit.baseline.review
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute speckit.baseline.review?
+    description: Review the finished code against the architecture rules and boundaries
+    condition: null
+  after_converge:
+  - extension: baseline
+    command: speckit.baseline.check
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute speckit.baseline.check?
+    description: Recalculate delivery status from verification evidence
+    condition: null

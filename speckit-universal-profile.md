@@ -23,7 +23,8 @@ Adoption and application completion are separate conclusions. Adopting this prof
 | [modules/](modules/) | One file per product module. Read and apply only those that [section 12](#12-optional-modules) marks applicable. |
 | [preset/](preset/) | The converge rules of [section 5.9](#59-speckit-converge), with a script and a Spec Kit preset to install them. |
 | [extension/](extension/) | Spec Kit extension that adds the project baseline of [section 5.12](#512-project-baseline). |
-| [adoption-prompt.md](adoption-prompt.md) | Paste-ready prompt that sets up Spec Kit in a project and adopts this profile. |
+| [template/](template/) and [install.sh](install.sh) | A complete Spec Kit installation with the preset and extension applied, and the installer that copies it into a project. |
+| [adoption-prompt.md](adoption-prompt.md) | Paste-ready prompt that makes an agent adopt this profile in a project where `install.sh` has run. |
 
 ### Navigation
 
@@ -594,7 +595,7 @@ Report **ADOPTED** only when every applicable row and checklist requirement pass
 
 ### 14.1 Copyable instruction for a target agent
 
-For a project that may not have Git or Spec Kit yet, use the full prompt in [adoption-prompt.md](adoption-prompt.md). For a project that is already set up, this short form is enough:
+After `install.sh` has run on a project, use the full prompt in [adoption-prompt.md](adoption-prompt.md). For a project that is already adopted, this short form is enough:
 
 ```text
 Read the Spec Kit Universal Adoption and Execution Profile at <path> completely,

@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "presets": {
+    "universal-profile": {
+      "version": "2.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:0e53f668338b3e2db4f7a64f6829706c9bf888da89a90e1838e1c86f169c4867",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "codex": [
+          "speckit.converge"
+        ]
+      },
+      "registered_skills": {
+        "codex": [
+          "speckit-converge"
+        ]
+      },
+      "installed_at": "2026-10-09T11:53:16.005605+00:00"
+    }
+  }
+}

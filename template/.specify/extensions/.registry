@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "extensions": {
+    "baseline": {
+      "version": "0.2.0",
+      "source": "local",
+      "manifest_hash": "sha256:53ce0e0b1ebe8bf6cc2542a1e636fe09a1b7eb61b520d358f2aa472690248c3f",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "codex": [
+          "speckit.baseline.amend",
+          "speckit.baseline.context",
+          "speckit.baseline.check",
+          "speckit.baseline.review",
+          "speckit.baseline.reconcile",
+          "speckit.baseline.recover"
+        ]
+      },
+      "registered_skills": [],
+      "installed_at": "2026-10-09T11:53:16.392209+00:00"
+    }
+  }
+}
