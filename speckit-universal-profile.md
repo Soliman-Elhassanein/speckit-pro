@@ -22,6 +22,7 @@ Adoption and application completion are separate conclusions. Adopting this prof
 | `speckit-universal-profile.md` (this file) | Always. The complete core rules. |
 | [modules/](modules/) | One file per product module. Read and apply only those that [section 12](#12-optional-modules) marks applicable. |
 | [preset/](preset/) | The converge rules of [section 5.9](#59-speckit-converge), with a script and a Spec Kit preset to install them. |
+| [adoption-prompt.md](adoption-prompt.md) | Paste-ready prompt that sets up Spec Kit in a project and adopts this profile. |
 
 ### Navigation
 
@@ -557,6 +558,8 @@ Report **ADOPTED** only when every applicable row and checklist requirement pass
 ## 14. Reusable invocation and reporting
 
 ### 14.1 Copyable instruction for a target agent
+
+For a project that may not have Git or Spec Kit yet, use the full prompt in [adoption-prompt.md](adoption-prompt.md). For a project that is already set up, this short form is enough:
 
 ```text
 Read the Spec Kit Universal Adoption and Execution Profile at <path> completely,
