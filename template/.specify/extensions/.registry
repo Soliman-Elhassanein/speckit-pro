@@ -2,9 +2,9 @@
   "schema_version": "1.0",
   "extensions": {
     "baseline": {
-      "version": "0.4.0",
+      "version": "0.5.0",
       "source": "local",
-      "manifest_hash": "sha256:acc183257a857a1a27bc2a3576f4910994f519761b240da4290136ed48cf5654",
+      "manifest_hash": "sha256:a69b4d38a0b250a77346a39f79c2935e78b16ff16082207c8de75917ee3497d1",
       "enabled": true,
       "priority": 10,
       "registered_commands": {
@@ -18,7 +18,7 @@
         ]
       },
       "registered_skills": [],
-      "installed_at": "2026-10-09T14:57:49.550764+00:00"
+      "installed_at": "2026-10-09T15:37:08.485909+00:00"
     }
   }
 }

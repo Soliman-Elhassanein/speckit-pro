@@ -3,7 +3,7 @@ schema_version: "1.0"
 preset:
   id: "universal-profile"
   name: "Universal Profile"
-  version: "2.2.0"
+  version: "2.3.0"
   description: "The Spec Kit Universal Adoption and Execution Profile as operative commands and templates: stable IDs, a verification matrix, verification evidence, and evidence-aware converge"
   author: "Soliman-Elhassanein"
 

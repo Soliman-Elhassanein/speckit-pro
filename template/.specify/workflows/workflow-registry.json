@@ -6,16 +6,16 @@
       "version": "1.0.1",
       "description": "Runs specify \u2192 plan \u2192 tasks \u2192 implement with review gates",
       "source": "bundled",
-      "installed_at": "2026-10-09T14:57:48.803095+00:00",
-      "updated_at": "2026-10-09T14:57:48.803106+00:00"
+      "installed_at": "2026-10-09T15:37:07.405083+00:00",
+      "updated_at": "2026-10-09T15:37:07.405101+00:00"
     },
     "speckit-pro": {
       "name": "speckit-pro Cycle",
       "version": "1.1.0",
       "description": "Runs specify \u2192 clarify \u2192 plan \u2192 tasks \u2192 analyze \u2192 baseline check \u2192 implement \u2192 converge with review gates",
       "source": "speckit-pro",
-      "installed_at": "2026-10-09T14:57:49.875982+00:00",
-      "updated_at": "2026-10-09T14:57:49.875995+00:00"
+      "installed_at": "2026-10-09T15:37:08.964859+00:00",
+      "updated_at": "2026-10-09T15:37:08.964872+00:00"
     }
   }
 }

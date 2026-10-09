@@ -2,9 +2,9 @@
   "schema_version": "1.0",
   "presets": {
     "universal-profile": {
-      "version": "2.2.0",
+      "version": "2.3.0",
       "source": "local",
-      "manifest_hash": "sha256:0bd5700a1948a4b73d6cde69d264eb0c768b85fac99cc447137723840d9a8c98",
+      "manifest_hash": "sha256:d81197c09f5c6e48ff7c91f0d836e8dc6a9fea1b39f41d6aefff3f3d28508bd5",
       "enabled": true,
       "priority": 10,
       "registered_commands": {
@@ -29,7 +29,7 @@
           "speckit-converge"
         ]
       },
-      "installed_at": "2026-10-09T14:57:49.115226+00:00"
+      "installed_at": "2026-10-09T15:37:07.840569+00:00"
     }
   }
 }

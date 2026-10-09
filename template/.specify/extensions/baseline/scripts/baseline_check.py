@@ -18,6 +18,8 @@ Modes (default is a read-only check):
   --context           print the baseline entries for --ids and/or --paths
   --touched SPEC      print the parts and rules touched since that spec's baseline
   --scan              print a partition of tracked files, to recover a baseline
+  --commit-msg FILE   reject a commit message, author or committer that names a
+                      coding agent as a contributor (used by the commit-msg hook)
 
 In blocking mode nothing is written when the check reports an error, and the
 exit code is 1. In advisory mode errors are reported, the exit code is 0, and
@@ -71,6 +73,26 @@ CALCULATED = ("delivery", "owning spec", "state")
 # Tracked files that are not product code unless a part maps them.
 NOT_CODE_DEFAULT = ("specs", "docs", "*.md", "LICENSE*")
 RULE_CHECK_TIMEOUT = 600
+# A coding agent never lists itself as a contributor. These match the agent's name in the name part
+# of an author, a committer or a trailer; a person's own name and address are never matched.
+AGENT_NAME_RES = (
+    re.compile(r"^claude(?:\s+(?:code|opus|sonnet|haiku|fable|instant|\d).*)?$", re.IGNORECASE),
+    re.compile(
+        r"\b(?:chatgpt|codex|copilot|gemini|cursor agent|cursoragent|devin ai|aider|windsurf|codeium|"
+        r"google-labs-jules|amazon q|openhands|cline|tabnine)\b", re.IGNORECASE,
+    ),
+    re.compile(r"\[bot\]", re.IGNORECASE),
+)
+AGENT_EMAILS = ("noreply@anthropic.com", "cursoragent@cursor.com")
+TRAILER_RE = re.compile(
+    r"^\s*(co-authored-by|signed-off-by|authored-by|co-developed-by|generated-by|assisted-by)\s*:\s*(.+)$", re.IGNORECASE
+)
+GENERATED_RE = re.compile(
+    r"(?:\U0001F916.*\b(?:generated|created|written)\b)|"
+    r"\b(?:generated|created|written|authored|assisted|co-authored)\s+(?:with|by)\b.*"
+    r"\b(?:claude|chatgpt|codex|copilot|gemini|cursor|devin|aider|windsurf|codeium|jules|openhands|cline|an? ai\b|ai assistant)",
+    re.IGNORECASE,
+)
 MANIFESTS = (
     "package.json", "pyproject.toml", "requirements.txt", "go.mod", "Cargo.toml", "pom.xml",
     "build.gradle", "build.gradle.kts", "settings.gradle.kts", "pubspec.yaml", "Gemfile", "composer.json",
@@ -293,6 +315,61 @@ class Baseline:
             return row_hash(part["header"], part["row"]) if part else None
         entry = self.entries.get(key)
         return row_hash(entry["header"], entry["row"]) if entry else None
+
+
+def is_agent(identity: str) -> bool:
+    """Whether `Name <email>` names a coding agent."""
+    name, _, email = identity.partition("<")
+    name, email = name.strip(), email.strip("> ").lower()
+    return email in AGENT_EMAILS or any(pattern.search(name) for pattern in AGENT_NAME_RES)
+
+
+def attribution_problems(message: str, identities: dict[str, str]) -> list[str]:
+    """Places where a commit names a coding agent as a contributor."""
+    problems = [f"the {role} is `{who}`" for role, who in identities.items() if is_agent(who)]
+    for line in message.splitlines():
+        if line.startswith("#"):
+            continue
+        trailer = TRAILER_RE.match(line)
+        if trailer and is_agent(trailer.group(2)):
+            problems.append(f"the line `{line.strip()}`")
+        elif GENERATED_RE.search(line):
+            problems.append(f"the line `{line.strip()}`")
+    return problems
+
+
+def check_commit_message(root: Path, path: Path) -> int:
+    identities = {}
+    for role, variable in (("author", "GIT_AUTHOR_IDENT"), ("committer", "GIT_COMMITTER_IDENT")):
+        ident = git(root, "var", variable)
+        if ident:
+            identities[role] = re.sub(r"\s+\d+\s+[+-]\d{4}$", "", ident[0])
+    problems = attribution_problems(path.read_text(encoding="utf-8", errors="replace"), identities)
+    for problem in problems:
+        print(f"error: this commit names a coding agent as a contributor: {problem}", file=sys.stderr)
+    if problems:
+        print("error: commit as the user alone; remove the line, or set the user's own git identity", file=sys.stderr)
+    return 1 if problems else 0
+
+
+def agent_commits(root: Path, since: str) -> list[str]:
+    """Commits after the synced commit (or only the last one) that name an agent as a contributor."""
+    span = [f"{since}..HEAD"] if since and git(root, "merge-base", "--is-ancestor", since, "HEAD") is not None else ["-1", "HEAD"]
+    try:
+        done = subprocess.run(
+            ["git", "-C", str(root), "log", "--format=%h%x1f%an <%ae>%x1f%cn <%ce>%x1f%B%x1e", *span],
+            capture_output=True, text=True, check=False,
+        )
+    except OSError:
+        return []
+    found = []
+    for record in done.stdout.split("\x1e") if done.returncode == 0 else []:
+        fields = record.strip("\n").split("\x1f")
+        if len(fields) == 4:
+            problems = attribution_problems(fields[3], {"author": fields[1], "committer": fields[2]})
+            if problems:
+                found.append(f"commit {fields[0]} names a coding agent as a contributor ({problems[0]})")
+    return found
 
 
 def load_json(path: Path, errors: list[str], root: Path) -> dict:
@@ -559,10 +636,13 @@ def main() -> int:
     parser.add_argument("--paths", default="", help="comma separated file or folder paths")
     parser.add_argument("--touched", metavar="SPEC", help="print parts and rules touched since a spec's baseline")
     parser.add_argument("--scan", action="store_true", help="print a partition of tracked files")
+    parser.add_argument("--commit-msg", type=Path, metavar="FILE", help="check one commit message for agent attribution")
     parser.add_argument("--root", type=Path, default=None, help="repository root (default: nearest folder with .specify)")
     args = parser.parse_args()
 
     root = args.root or find_root(Path.cwd())
+    if args.commit_msg:
+        return check_commit_message(root or Path.cwd(), args.commit_msg)
     if root is None or not (root / ".specify").is_dir():
         print("error: no .specify folder found; run from inside a Spec Kit project", file=sys.stderr)
         return 1
@@ -889,6 +969,10 @@ def main() -> int:
     if dump_json(state) != state_before:
         state["version"] = 2
         writes[memory / STATE_FILE] = dump_json(state)
+
+    # No agent as a contributor. The commit-msg hook prevents it; this reports what got past the hook.
+    for message in agent_commits(root, str(stamp.get("commit", ""))):
+        warnings.append(message + "; do not repeat it, and rewrite history only when the user authorizes it")
 
     # Architecture rules that carry an executable check.
     for ident, entry in base.of_kind("AR-").items():

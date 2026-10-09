@@ -67,6 +67,8 @@ The full rules are in [speckit-universal-profile.md](speckit-universal-profile.m
 
 The check script is deterministic: plain Python and git, no AI. It rejects `Completion: DONE` unless the feature's records hold together: every requirement ID in the spec has a passing coverage row, every recorded command exited with 0, every task is checked, the evidence links resolve, and convergence was reached. It also catches stale citations, code that changed outside a feature, and deleted history.
 
+Agents may not list themselves as contributors. The installer adds a `commit-msg` hook that rejects a commit whose message, author or committer names a coding agent, such as a `Co-Authored-By` line for a model or a "Generated with" line, and the check warns about any that got past it.
+
 It judges structure, not meaning. It cannot tell whether a test asserts the right thing, or whether a recorded run really happened. That judgment stays with the analyze and converge commands, which are instructions an agent follows, and with your review. Treat `verified` as "the record is complete and consistent", not as proof.
 
 A project that adopts the baseline with code already written starts in advisory mode: the check reports and does not stop work. To run it in CI, copy `.specify/extensions/baseline/ci/baseline.yml` into `.github/workflows/`.

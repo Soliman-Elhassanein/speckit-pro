@@ -19,6 +19,7 @@ jobs:
           sh -n install.sh
           sh -n scripts/build-template.sh
           sh -n preset/apply-converge.sh
+          sh -n extension/scripts/install-git-hooks.sh
       - name: YAML parses
         run: |
           pip install --quiet pyyaml

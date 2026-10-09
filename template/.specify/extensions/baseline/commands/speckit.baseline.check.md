@@ -44,6 +44,7 @@ This command runs a script. The script decides; do not replace its result with y
 - **Code against the map**: code that no part maps, a built part whose paths match no file, and a part whose code changed since its synced point while no unfinished feature lists that part.
 - **Rule checks**: with `--run-rule-checks`, each architecture rule's Check command. A failing rule marked Blocking is an error; any other is a warning.
 - **History**: a baseline row that was deleted since the last commit is an error; a rewritten decision is a warning.
+- **No agent as a contributor**: a commit since the last synced point whose message, author or committer names a coding agent is a warning. Do not repeat it; rewrite history only when the user authorizes it. The `commit-msg` hook stops such commits before they are made; install it with `sh .specify/extensions/baseline/scripts/install-git-hooks.sh`.
 - Dependencies between capabilities exist and form no cycle. Links inside the three baseline files resolve.
 
 `--strict` turns warnings into errors.

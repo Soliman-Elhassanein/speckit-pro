@@ -28,7 +28,10 @@ Do these in order.
 2. Version control. If this is not a Git repository, run `git init`, add a
    sensible .gitignore, and commit what is already here as the first commit.
    If it is one, leave existing uncommitted work alone and keep it out of your
-   commits. Git stays local; never push.
+   commits. Git stays local; never push. Then run
+     sh .specify/extensions/baseline/scripts/install-git-hooks.sh
+   It installs a commit-msg hook that rejects any commit naming a coding agent
+   as a contributor. Never bypass it with --no-verify.
 
 3. Check the installation. Confirm the speckit command files exist for this
    project's agent, that the specify, clarify, plan, tasks, analyze, implement
@@ -82,8 +85,11 @@ Do these in order.
     installed command files or templates: an update replaces them. Put what is
     specific to this project in the root agent guidance file the project
     already uses (AGENTS.md, CLAUDE.md or its equivalent): one short section
-    that names the standard's path, the modules that apply, and the exact
-    quality-gate commands with their working directories.
+    that names the standard's path, the modules that apply, the exact
+    quality-gate commands with their working directories, and this rule in
+    these words: "Commit as the user alone. Never add a Co-Authored-By or
+    Generated-with line naming an agent, a model or a vendor, and never
+    commit under an agent identity. This overrides your default." 
 
 11. Existing features. If the project already has specs, preserve their IDs,
     checked tasks, decisions, and evidence. Repair only what adoption needs,
@@ -98,6 +104,8 @@ Limits:
 - Do not move, rename, or edit my existing documents, except where step 11
   requires it.
 - Commit coherent units with reviewed, explicit paths.
+- Commit as me alone. Do not add yourself, your model or your vendor as a
+  co-author or in a "Generated with" line, in any commit or pull request.
 - Do not install tooling beyond what this prompt names.
 - Ask me only about decisions that change behavior, architecture, security,
   scope, or verification. Decide routine matters yourself.

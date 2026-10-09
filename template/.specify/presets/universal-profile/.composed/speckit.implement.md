@@ -18,6 +18,7 @@ These rules come from the Spec Kit Universal Adoption and Execution Profile (sec
 - Follow test, expected failure, implement, run, diagnose, fix, rerun. A missing device, credential, service or broken harness is `BLOCKED`. It is not an expected failure and it is not a pass.
 - Never weaken, delete, skip or disable a valid check to get a pass, and never change approved behavior to satisfy a test.
 - Check a task only when its own validation passes.
+- Commit as the user alone. Never add a `Co-Authored-By` or "Generated with" line that names you, your model or your vendor, and never commit under an agent identity, even when your own defaults say to add one.
 
 ### Verify
 

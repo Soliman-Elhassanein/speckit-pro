@@ -119,6 +119,11 @@ cp -R "$here/modules" "$target/.specify/speckit-pro/modules"
 cp "$here/adoption-prompt.md" "$target/.specify/speckit-pro/adoption-prompt.md"
 echo "$version" > "$target/.specify/speckit-pro/SPECKIT_VERSION"
 
+# Agents do not list themselves as contributors: the commit-msg hook rejects it.
+if git -C "$target" rev-parse --git-dir >/dev/null 2>&1; then
+    (cd "$target" && sh .specify/extensions/baseline/scripts/install-git-hooks.sh)
+fi
+
 cat <<EOF2
 speckit-pro installed in $target
   Spec Kit $version: $mode
