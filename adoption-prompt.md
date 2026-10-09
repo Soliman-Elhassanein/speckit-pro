@@ -6,13 +6,19 @@ Run `install.sh` on the project first. Then paste the block below into a coding 
 Adopt the speckit-pro standard in this project. Its files are already
 installed here:
 
-  .agents/skills/speckit-*/SKILL.md      the Spec Kit commands (run one by
-                                         reading its file and following it)
-  .agents/skills/speckit-standard.md     the standard (core, always applies)
-  .specify/speckit-pro/modules/         optional modules; section 12 of the
+  .specify/speckit-pro/speckit-universal-profile.md
+                                         the standard (core, always applies)
+  .specify/speckit-pro/modules/          optional modules; section 12 of the
                                          standard says when each one applies
   .specify/extensions/baseline/          project baseline: commands, templates
                                          and the check script
+  .specify/presets/universal-profile/    the standard's rules for the Spec Kit
+                                         commands, and its template sections
+
+The Spec Kit commands are installed for the coding agent this project already
+uses, in that agent's own folder (for example .agents/skills, .claude/skills
+or .github). Find them there. If your agent does not load them by name, run
+one by reading its file and following it.
 
 Do these in order.
 
@@ -24,23 +30,24 @@ Do these in order.
    If it is one, leave existing uncommitted work alone and keep it out of your
    commits. Git stays local; never push.
 
-3. Check the installation. Confirm .agents/skills holds the speckit skills and
-   speckit-standard.md, and that .specify/ exists. Do not run `specify init`,
-   and do not install, add, or switch an integration. Never create a .claude
-   directory or any other agent directory. Commit the installed files.
+3. Check the installation. Confirm the speckit command files exist for this
+   project's agent, that the specify, clarify, plan, tasks, analyze, implement
+   and converge commands each carry a section headed "Universal profile
+   rules", and that .specify/ exists. Do not run `specify init`, and do not
+   install, add, or switch an integration or create another agent's folder.
+   Commit the installed files.
 
-4. Read .agents/skills/speckit-standard.md completely.
+4. Read .specify/speckit-pro/speckit-universal-profile.md completely.
 
 5. Decide which optional modules apply, using section 12 of the standard and
-   what you found in step 1. Copy only the applicable ones, byte for byte,
-   from .specify/speckit-pro/modules/ to docs/modules/, and read them. Record
-   every module in the adoption report as applicable, naming the sections that
-   apply, or as N/A with a concrete reason. If the architecture or platform is
-   not chosen yet, mark the modules that depend on it N/A for now and say when
-   to re-evaluate them.
-   Links inside the standard that point to modules/, preset/ and extension/
-   do not resolve from its installed location; note that in the report
-   instead of fixing it.
+   what you found in step 1, and read the applicable ones in
+   .specify/speckit-pro/modules/. Record every module in the adoption report
+   as applicable, naming the sections that apply, or as N/A with a concrete
+   reason. If the architecture or platform is not chosen yet, mark the modules
+   that depend on it N/A for now and say when to re-evaluate them.
+   Links inside the standard that point to preset/, extension/, workflow/ and
+   template/ do not resolve from its installed location; note that in the
+   report instead of fixing it.
 
 6. Read the project's own material: vision, requirement, design, and research
    documents, and any existing specs. Where documents conflict, record the
@@ -53,29 +60,30 @@ Do these in order.
    open.
 
 8. Constitution. If .specify/memory/constitution.md is still the unfilled
-   template, create it by following the constitution skill. If it is filled,
+   template, create it by following the constitution command. If it is filled,
    amend it in place as section 3 of the standard describes. Build the
    project's principles from its own material and from section 3.
 
 9. Project baseline (section 5.12 of the standard).
-   - No application code yet: follow the baseline amend skill to create
+   - No application code yet: follow the baseline amend command to create
      .specify/memory/product.md, architecture.md and decisions.md from the
      project's own material. Leave the stack rows empty if no stack is chosen.
-   - Code already exists: follow the baseline recover skill instead.
-   Show me the rows before writing them, as those skills require. Finish with:
-     python3 .specify/extensions/baseline/scripts/baseline_check.py --write --stamp
+     Finish with:
+       python3 .specify/extensions/baseline/scripts/baseline_check.py --write --stamp
+   - Code already exists: ask me first whether to adopt the baseline now. If
+     I say yes, follow the baseline recover command, which starts the check in
+     advisory mode. If I say no, skip this step: a project without product.md
+     is not blocked.
+   Show me the rows before writing them, as those commands require.
 
-10. Follow the adoption transaction in section 2 of the standard. The
-    specify, plan, tasks, analyze, implement and converge skills already carry
-    the standard's rules under the heading "Universal profile rules", and the
-    spec, plan and tasks templates already gain its sections from
-    .specify/presets/universal-profile/templates/. Confirm both and record
-    them in the adoption report. Do not edit those skills or templates. In
-    each remaining stock SKILL.md (constitution, clarify, checklist,
-    taskstoissues), add one short section that tells the reader to read
-    .agents/skills/speckit-standard.md before acting and names the sections
-    that govern that command. Point to the standard; do not copy its rule
-    text. Keep each file's frontmatter and existing steps intact.
+10. Follow the adoption transaction in section 2 of the standard. The command
+    rules and the template sections are already installed by the preset;
+    confirm them and record them in the adoption report. Do not edit the
+    installed command files or templates: an update replaces them. Put what is
+    specific to this project in the root agent guidance file the project
+    already uses (AGENTS.md, CLAUDE.md or its equivalent): one short section
+    that names the standard's path, the modules that apply, and the exact
+    quality-gate commands with their working directories.
 
 11. Existing features. If the project already has specs, preserve their IDs,
     checked tasks, decisions, and evidence. Repair only what adoption needs,
@@ -97,6 +105,6 @@ Limits:
 Finish by writing docs/spec-kit-adoption.md as section 13 of the standard
 requires. Report ADOPTED only if that section's gate is fully met; otherwise
 report PARTIAL and list each FAIL or BLOCKED row. Label application tests
-accurately; they are NOT RUN if you ran none. Then run `ls -R .agents`, show
-me the output, and name the skill I should run next.
+accurately; they are NOT RUN if you ran none. Then list the installed speckit
+command files, and name the command I should run next.
 ```

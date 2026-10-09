@@ -19,7 +19,8 @@ hooks:
     optional: false
     priority: 10
     prompt: Execute speckit.baseline.check?
-    description: Pin the baseline entries the new spec cites
+    description: Record the spec as owner of its capability and pin the entries it
+      cites
     condition: null
   before_plan:
   - extension: baseline
@@ -37,7 +38,7 @@ hooks:
     optional: false
     priority: 10
     prompt: Execute speckit.baseline.check?
-    description: Pin the baseline entries the new plan cites
+    description: Pin the stack, the parts and the entries the new plan cites
     condition: null
   before_analyze:
   - extension: baseline
@@ -58,7 +59,7 @@ hooks:
     prompt: Execute speckit.baseline.check?
     description: Stop implementation while the baseline check fails
     condition: null
-  after_implement:
+  before_converge:
   - extension: baseline
     command: speckit.baseline.review
     enabled: true
@@ -66,6 +67,16 @@ hooks:
     priority: 10
     prompt: Execute speckit.baseline.review?
     description: Review the finished code against the architecture rules and boundaries
+    condition: null
+  after_implement:
+  - extension: baseline
+    command: speckit.baseline.check
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute speckit.baseline.check?
+    description: Recalculate delivery from the finished record and record the synced
+      point of this feature's parts
     condition: null
   after_converge:
   - extension: baseline

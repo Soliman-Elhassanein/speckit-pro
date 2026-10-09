@@ -3,7 +3,7 @@ schema_version: "1.0"
 extension:
   id: baseline
   name: "Project Baseline"
-  version: "0.3.0"
+  version: "0.4.0"
   description: "Project memory beside the constitution: product.md (what), architecture.md (how), decisions.md (why). Read before specify and plan, changed only with approval, and checked by a script."
   category: "process"
   effect: "read-write"
@@ -23,10 +23,10 @@ provides:
       description: "Before specify or plan: pick the path for the request, load the relevant baseline entries, and put conflicts to the user"
     - name: speckit.baseline.check
       file: commands/speckit.baseline.check.md
-      description: "Run the deterministic baseline check and recalculate delivery status"
+      description: "Run the deterministic baseline check and write the calculated cells"
     - name: speckit.baseline.review
       file: commands/speckit.baseline.review.md
-      description: "After implement: review the finished code against the architecture rules and boundaries, and turn violations into tasks"
+      description: "Before converge: review the finished code against the architecture rules and boundaries, and turn violations into tasks"
     - name: speckit.baseline.reconcile
       file: commands/speckit.baseline.reconcile.md
       description: "Reconcile code that changed outside the process with the baseline and the specs"
@@ -42,7 +42,7 @@ hooks:
   after_specify:
     command: speckit.baseline.check
     optional: false
-    description: "Pin the baseline entries the new spec cites"
+    description: "Record the spec as owner of its capability and pin the entries it cites"
   before_plan:
     command: speckit.baseline.context
     optional: false
@@ -50,7 +50,7 @@ hooks:
   after_plan:
     command: speckit.baseline.check
     optional: false
-    description: "Pin the baseline entries the new plan cites"
+    description: "Pin the stack, the parts and the entries the new plan cites"
   before_analyze:
     command: speckit.baseline.check
     optional: false
@@ -59,10 +59,14 @@ hooks:
     command: speckit.baseline.check
     optional: false
     description: "Stop implementation while the baseline check fails"
-  after_implement:
+  before_converge:
     command: speckit.baseline.review
     optional: false
     description: "Review the finished code against the architecture rules and boundaries"
+  after_implement:
+    command: speckit.baseline.check
+    optional: false
+    description: "Recalculate delivery from the finished record and record the synced point of this feature's parts"
   after_converge:
     command: speckit.baseline.check
     optional: false

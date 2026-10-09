@@ -1,7 +1,7 @@
 # Verification: <feature>
 
 Constitution: <actual version>
-Profile: Spec Kit Universal Adoption and Execution Profile 2.1.0
+Profile: Spec Kit Universal Adoption and Execution Profile 2.2.0
 Completion: NOT DONE
 Tested revision / relevant working-tree fingerprint: <actual value>
 Run date/time and timezone: <actual run time>

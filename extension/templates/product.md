@@ -24,17 +24,20 @@ One row per promise that can be delivered on its own. A promise built in two ste
 Each row has one owning spec; a change to the promise amends that spec.
 
 - **Decision** is typed here: `proposed`, `approved`, `superseded`, or `retired`. Rows are never deleted.
-- **Delivery** is never typed. The baseline check script calculates it from the owning spec's
-  `verification.md`: `unstarted`, `in progress`, or `verified`.
+- **Depends on** lists the capabilities that must be verified first, or `-`.
+- **Owning spec** and **Delivery** are never typed. The baseline check script calculates them: the
+  owner is the spec that implements the capability, and Delivery is `unstarted`, `in progress`, or
+  `verified` from the `verification.md` of that spec and of every spec that changes the capability.
 
-| ID | Promise | Decision | Owning spec | Delivery |
-|----|---------|----------|-------------|----------|
-| CAP-001 | [One line the user would recognise.] | proposed | - | unstarted |
+| ID | Promise | Decision | Depends on | Owning spec | Delivery |
+|----|---------|----------|------------|-------------|----------|
+| CAP-001 | [One line the user would recognise.] | proposed | - | - | unstarted |
 
 ## Open questions
 
-Questions that were deferred, so they are not lost.
+Questions that were deferred, so they are not lost. **Blocks** names the capabilities that cannot
+be specified until the question is answered. **Status** is `open` or `answered by D-NNN`; rows stay.
 
-| ID | Question | Blocks | Raised |
-|----|----------|--------|--------|
-| Q-001 | [Question.] | [CAP or step it blocks, or "nothing yet"] | [YYYY-MM-DD] |
+| ID | Question | Blocks | Raised | Status |
+|----|----------|--------|--------|--------|
+| Q-001 | [Question.] | [CAP-NNN, or "nothing yet"] | [YYYY-MM-DD] | open |

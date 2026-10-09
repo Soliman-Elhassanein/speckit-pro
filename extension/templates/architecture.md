@@ -16,19 +16,24 @@ Choices only. Exact versions live in the lockfiles.
 
 ## Parts and boundaries
 
-Each part, what it owns, where its code lives, and what it may depend on. **Paths** are folders
-or globs, comma separated. The check script uses them to notice code that changed outside the
-process and code that no part maps.
+Each part, what it owns, where its code lives, and what it may depend on. **Paths** are folders,
+files or globs, comma separated; a root file or a hidden folder that is product code belongs here
+too. The check script uses them to notice code that changed outside the process and code that no
+part maps. **State** is never typed after the row is added: a new part starts `planned`, and the
+check script sets `built` once its paths hold code.
 
-| Part | Owns | Paths | May depend on |
-|------|------|-------|---------------|
-| [Name] | [Data, rule or responsibility it is the one authority for] | [src/name] | [Parts] |
+| Part | Owns | Paths | May depend on | State |
+|------|------|-------|---------------|-------|
+| [Name] | [Data, rule or responsibility it is the one authority for] | [src/name] | [Parts] | planned |
+
+**Not code**: specs, docs, *.md, LICENSE*
 
 ## Architecture rules
 
 Rules that every plan and all code must follow. **Blocking** is `yes` or `no`: a broken blocking
 rule stops the work; any other becomes a refactor task. **Check** is optional: a command that
 exits non-zero when the rule is broken, such as the project's own lint or architecture test.
+Write a pipe inside a command as `\|`.
 
 | ID | Rule | Blocking | Check |
 |----|------|----------|-------|

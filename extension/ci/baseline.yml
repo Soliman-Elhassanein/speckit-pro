@@ -1,0 +1,21 @@
+# Sample GitHub Actions workflow for a project that uses the baseline.
+# Copy it to .github/workflows/baseline.yml. It needs nothing but Python and git.
+#
+# Start with `continue-on-error: true` on the check step while the repository
+# is being cleaned up, then remove that line to make the check blocking.
+name: baseline
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Baseline check
+        run: python3 .specify/extensions/baseline/scripts/baseline_check.py --strict

@@ -6,3 +6,7 @@ Thumbs.db
 
 # Scratch notes, not part of the project
 tmp/
+
+# Generated
+__pycache__/
+*.tmp

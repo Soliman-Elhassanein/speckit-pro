@@ -1,6 +1,6 @@
 ---
 name: speckit-baseline-review
-description: 'After implement: review the finished code against the architecture rules and boundaries, and turn violations into tasks'
+description: 'Before converge: review the finished code against the architecture rules and boundaries, and turn violations into tasks'
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: Soliman-Elhassanein
@@ -17,7 +17,7 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
-This command runs as a hook after implement. It reads code and the baseline. Its only file write is appending tasks to the current feature's `tasks.md`. It never edits code, the spec, the plan or the baseline. `CHECK` stands for `python3 .specify/extensions/baseline/scripts/baseline_check.py`.
+This command runs as a hook before converge, so its findings are open tasks when convergence is judged and the feature cannot be marked done over them. It reads code and the baseline. Its only file write is appending tasks to the current feature's `tasks.md`. It never edits code, the spec, the plan or the baseline. `CHECK` stands for `python3 .specify/extensions/baseline/scripts/baseline_check.py`.
 
 ## Steps
 

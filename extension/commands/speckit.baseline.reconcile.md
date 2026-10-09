@@ -18,15 +18,15 @@ Use this after a bug fix, a small change, a manual edit, or whenever the baselin
 
 ### 1. Find what changed
 
-Read the synced commit from the `stamp` value in `.specify/memory/baseline-state.json`, then:
+Run `CHECK`. It names each part whose code changed since its synced point, and code that no part maps. Then look at those folders:
 
 ```sh
-git diff --stat <stamp> HEAD
+git diff --stat <commit> HEAD -- <paths of the changed parts>
 git status --short
 CHECK --context --paths <changed folders, comma separated>
 ```
 
-If there is no stamp yet, compare against the oldest commit that the baseline describes, or ask the user which commit to use.
+`<commit>` is the `commit` value under `stamp` in `.specify/memory/baseline-state.json`. If history was rewritten and that commit is gone, use `git log -- <paths>` to find the changes, or ask the user which commit to compare against.
 
 ### 2. Classify each change
 
@@ -50,7 +50,7 @@ Present the table, with your recommendation for every row that needs a decision.
 ### 4. Apply
 
 - Baseline changes the user approved: run the baseline amend command with them.
-- Spec changes the user approved: amend the owning spec in place, keeping its IDs.
+- Spec changes the user approved: amend the owning spec in place, keeping its IDs. Then update its plan and tasks where the change reaches them, and verify again: the check rejects a finished feature whose spec changed after its last recorded run.
 - Code the user wants reverted or refactored: add the work to the owning spec's `tasks.md`, or do it if it is small and the user says so.
 
 ### 5. Record the new synced point
@@ -61,4 +61,4 @@ Once the code, the specs and the baseline agree:
 CHECK --write --stamp
 ```
 
-Report what changed, what was decided, and the check result. Commit the reconciliation as its own unit.
+A bare `--stamp` records every part as agreeing with the baseline, so run it only after every change in step 2 has a decision. Report what changed, what was decided, and the check result. Commit the reconciliation as its own unit.

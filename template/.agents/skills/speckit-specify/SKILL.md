@@ -29,7 +29,7 @@ These rules come from the Spec Kit Universal Adoption and Execution Profile (sec
 
 ### Project baseline
 
-- When a hook before this command handed over a block that starts with `**Implements**:`, write that block directly below the `**Input**` line, unchanged.
+- When a hook before this command handed over a block of `**Implements**:`, `**Changes**:`, `**Product rules**:` and `**Baseline**:` lines, write that block directly below the `**Input**` line, unchanged. Those lines are the spec's only citations of the baseline; an ID mentioned in prose is not one.
 
 
 ## User Input

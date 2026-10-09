@@ -24,10 +24,10 @@ After the last task, on the final state of the code:
 
 ### Converge and complete
 
-1. Run the converge command.
+1. Run the converge command. Tasks that a review appended before it are open work like any other.
 2. Write its outcome on the `Outcome:` line of the "Convergence" section, with the assessment date and the assessed state.
 3. On `tasks_appended` or `gaps_remaining`, do the open work, verify again and converge again. Stop honestly when the work is blocked or outside what was authorized.
 4. Set `Completion: DONE` only when every status is `PASS`, every coverage count is complete, every task is checked, and the outcome is `converged`. Otherwise it stays `NOT DONE`.
-5. When `.specify/extensions/baseline/scripts/baseline_check.py` exists, run it with `--write` (add `--stamp` when the outcome is `converged`). It rejects a `DONE` that the record does not support.
+5. When `.specify/extensions/baseline/scripts/baseline_check.py` exists, run it. It rejects a `DONE` that the record does not support: a missing plan or tasks file, an unchecked task, a requirement ID without a passing Coverage row, a non-zero exit code, a failure count, an unresolved evidence link, or an outcome other than `converged`. Fix the record or the work; never reword the record to get past the check.
 
 {CORE_TEMPLATE}

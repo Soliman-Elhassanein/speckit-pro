@@ -33,7 +33,7 @@ These rules come from the Spec Kit Universal Adoption and Execution Profile (sec
 
 ### Project baseline
 
-- When a hook before this command handed over a block that starts with `**Architecture impact**:`, write that block directly below the `**Input**` line, unchanged.
+- When a hook before this command handed over a block that starts with `**Architecture impact**:`, write that block directly below the `**Input**` line, unchanged, including its `**Parts**:` line.
 
 
 ## User Input

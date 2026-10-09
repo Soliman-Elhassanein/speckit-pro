@@ -2,14 +2,15 @@
   "schema_version": "1.0",
   "presets": {
     "universal-profile": {
-      "version": "2.1.0",
+      "version": "2.2.0",
       "source": "local",
-      "manifest_hash": "sha256:7d34a5cc9a4dad9c304cd73cf17793ef440e6f37cb95a83a63c07089ba38ba58",
+      "manifest_hash": "sha256:0bd5700a1948a4b73d6cde69d264eb0c768b85fac99cc447137723840d9a8c98",
       "enabled": true,
       "priority": 10,
       "registered_commands": {
         "codex": [
           "speckit.specify",
+          "speckit.clarify",
           "speckit.plan",
           "speckit.tasks",
           "speckit.analyze",
@@ -20,6 +21,7 @@
       "registered_skills": {
         "codex": [
           "speckit-specify",
+          "speckit-clarify",
           "speckit-plan",
           "speckit-tasks",
           "speckit-analyze",
@@ -27,7 +29,7 @@
           "speckit-converge"
         ]
       },
-      "installed_at": "2026-10-09T12:29:43.075678+00:00"
+      "installed_at": "2026-10-09T14:57:49.115226+00:00"
     }
   }
 }
