@@ -1,0 +1,51 @@
+schema_version: "1.0"
+
+extension:
+  id: baseline
+  name: "Project Baseline"
+  version: "0.1.0"
+  description: "Project memory beside the constitution: product.md (what), architecture.md (how), decisions.md (why). Read before specify and plan, changed only with approval, and checked by a script."
+  category: "process"
+  effect: "read-write"
+  author: "Soliman-Elhassanein"
+
+requires:
+  # Verified on specify-cli 1.1.2.
+  speckit_version: ">=1.1.0"
+
+provides:
+  commands:
+    - name: speckit.baseline.amend
+      file: commands/speckit.baseline.amend.md
+      description: "Create or amend product.md, architecture.md and decisions.md, each change approved by the user first"
+    - name: speckit.baseline.context
+      file: commands/speckit.baseline.context.md
+      description: "Before specify or plan: pick the path for the request, load the relevant baseline entries, and put conflicts to the user"
+    - name: speckit.baseline.check
+      file: commands/speckit.baseline.check.md
+      description: "Run the deterministic baseline check and recalculate delivery status"
+
+hooks:
+  before_specify:
+    command: speckit.baseline.context
+    optional: false
+    description: "Choose the path for this request and load the product baseline"
+  before_plan:
+    command: speckit.baseline.context
+    optional: false
+    description: "Load the architecture baseline and decisions"
+  before_implement:
+    command: speckit.baseline.check
+    optional: false
+    description: "Stop implementation while the baseline check fails"
+  after_converge:
+    command: speckit.baseline.check
+    optional: false
+    description: "Recalculate delivery status from verification evidence"
+
+tags:
+  - "baseline"
+  - "product"
+  - "architecture"
+  - "decisions"
+  - "governance"

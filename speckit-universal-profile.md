@@ -22,6 +22,7 @@ Adoption and application completion are separate conclusions. Adopting this prof
 | `speckit-universal-profile.md` (this file) | Always. The complete core rules. |
 | [modules/](modules/) | One file per product module. Read and apply only those that [section 12](#12-optional-modules) marks applicable. |
 | [preset/](preset/) | The converge rules of [section 5.9](#59-speckit-converge), with a script and a Spec Kit preset to install them. |
+| [extension/](extension/) | Spec Kit extension that adds the project baseline of [section 5.12](#512-project-baseline). |
 | [adoption-prompt.md](adoption-prompt.md) | Paste-ready prompt that sets up Spec Kit in a project and adopts this profile. |
 
 ### Navigation
@@ -284,7 +285,7 @@ sh <path-to-this-standard>/preset/apply-converge.sh .agent/commands/speckit.conv
 specify preset add --dev <path-to-this-standard>/preset
 ```
 
-The script inserts the rules into the installed Markdown command and is safe to run again; `specify integration status` then reports that file as a modified managed file, which is the expected customization. The preset wraps the stock command and was verified on specify-cli 0.13.3 with the Claude, Codex (skills), Gemini, Copilot, OpenCode, and Cursor integrations; it does not reach the `generic` integration. Removing the preset deletes the composed command; restore the stock one with `specify integration upgrade <integration>`.
+The script inserts the rules into the installed Markdown command and is safe to run again; `specify integration status` then reports that file as a modified managed file, which is the expected customization. Both routes were re-verified on specify-cli 1.1.2. The preset wraps the stock command and was verified on specify-cli 0.13.3 with the Claude, Codex (skills), Gemini, Copilot, OpenCode, and Cursor integrations; it does not reach the `generic` integration. Removing the preset deletes the composed command; restore the stock one with `specify integration upgrade <integration>`.
 
 ### 5.10 `speckit-checklist`
 
@@ -295,6 +296,32 @@ Validate written requirements only, under the `checklists/*.md` contract of [sec
 The lifecycle is specify → review/clarify → plan → review → tasks → analyze → implement → verify → converge. Existing-feature entry follows [section 1.2](#12-start-from-the-phase-that-exists). When verification fails or convergence finds work, return to implementation, rerun affected/full verification, and converge again.
 
 If the workflow engine cannot express a repair loop, stop with an honest NOT DONE result and print the exact supported implement/verify/converge invocations and feature selection. Do not declare success simply because implementation ended. Preserve the same feature directory; use `SPECIFY_FEATURE_DIRECTORY` only if supported by that installation, otherwise its verified selection mechanism.
+
+### 5.12 Project baseline
+
+New projects keep four kinds of project memory, each the one home for its kind of fact:
+
+| File | Holds |
+|---|---|
+| `.specify/memory/constitution.md` | Rules: how we work |
+| `.specify/memory/product.md` | What: one row per capability, with its state |
+| `.specify/memory/architecture.md` | How: stack, parts, boundaries, architecture rules |
+| `.specify/memory/decisions.md` | Why: one row per decision, never deleted |
+
+A feature folder under `specs/` remains one change with its proof. Four laws govern the baseline:
+
+1. One home per fact. Everything else links to it.
+2. Calculate, do not maintain. A script derives each capability's delivery state from its owning spec's `verification.md` and checks IDs and links.
+3. The agent proposes; the user approves. Only the baseline amend command edits the three baseline files, and code never becomes correct because a baseline file was edited to match it.
+4. Process weight follows change size. A new behavior takes the full path; a bug fix and a behavior-preserving change take shorter ones and create no spec.
+
+The commands, templates, hooks, and check script are shipped in [extension/](extension/). Install them from the target project root:
+
+```sh
+specify extension add --dev <path-to-this-standard>/extension
+```
+
+It needs specify-cli 1.1.0 or later and was verified on 1.1.2 with the Codex (skills) and generic layouts: installation, command and hook registration, and the check script. Apply it to new projects; an existing project adopts it only when the user asks.
 
 ## 6. Testing policy
 

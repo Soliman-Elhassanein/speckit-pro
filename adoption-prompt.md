@@ -2,7 +2,7 @@
 
 Paste the block below into a coding agent opened in the root folder of the target project. It works for an empty folder, a folder that holds only notes, and a project that already uses Spec Kit.
 
-Nothing needs filling in. If this standard's folder moves, update the path that appears three times in the block.
+Nothing needs filling in. If this standard's folder moves, update the path that appears four times in the block.
 
 ```text
 Set up Spec Kit in this project if it is missing, then adopt my Spec Kit standard.
@@ -13,6 +13,8 @@ The standard lives outside this repo at:
     modules/                       (optional modules; section 12 of the core
                                     says when each one applies)
     preset/                        (my rules for the converge command)
+    extension/                     (project baseline: product, architecture
+                                    and decisions files, for new projects)
 
 Do these in order.
 
@@ -72,14 +74,26 @@ Do these in order.
    describes. Build the project's principles from its own material and from
    section 3.
 
-10. Follow the adoption transaction in section 2 of the standard: synchronize
+10. Project baseline, for new projects only. Do this step only if .specify/
+    did not exist when you started; in an existing project skip it and say so.
+    It needs specify-cli 1.1.0 or later (`specify --version`); if the version
+    is older, skip it and report that.
+      specify extension add --dev "/media/Data/Work/None College/Coding/speckit/extension"
+    Then follow the baseline amend command it installs to create
+    .specify/memory/product.md, architecture.md and decisions.md from the
+    project's own material. Show me the rows before writing them, as that
+    command requires. Leave the architecture stack rows empty if no stack is
+    chosen yet. Finish with:
+      python3 .specify/extensions/baseline/scripts/baseline_check.py --write
+
+11. Follow the adoption transaction in section 2 of the standard: synchronize
     the templates in .specify/templates and every installed command. In each
     command file, add one short section that tells the reader to read the
     repo's copy of the standard before acting and names the sections that
     govern that command. Point to the standard; do not copy its rule text.
     Keep each file's frontmatter and existing steps intact.
 
-11. Existing features. If the project already has specs, preserve their IDs,
+12. Existing features. If the project already has specs, preserve their IDs,
     checked tasks, decisions, and evidence. Repair only what adoption needs,
     such as missing AS and TR identifiers and the verification matrix, as
     section 1.2 of the standard describes. Do not regenerate them.
@@ -88,7 +102,7 @@ Limits:
 - Do not change product scope or settled decisions.
 - Do not choose a technology stack, write application code, start planning, or
   create a new feature spec. I will start the next step myself.
-- Do not move, rename, or edit my existing documents, except where step 11
+- Do not move, rename, or edit my existing documents, except where step 12
   requires it.
 - Commit coherent units with reviewed, explicit paths.
 - Do not install tooling beyond what this prompt names.
