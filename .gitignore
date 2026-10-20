@@ -1,0 +1,16 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*~
+*.swp
+
+# Generated
+__pycache__/
+*.tmp
+
+# Test coverage
+.coverage*
+
+# Local development tooling
+/.specify/
+/.agents/
