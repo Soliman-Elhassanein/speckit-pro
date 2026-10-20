@@ -3,7 +3,7 @@ schema_version: "1.0"
 extension:
   id: baseline
   name: "Project Baseline"
-  version: "4.0.0"
+  version: "4.0.1"
   description: "Project memory beside the constitution: product.md (what), architecture.md (how), decisions.md (why). Read before specify and plan, changed only with approval, and checked by a script."
   category: "process"
   effect: "read-write"

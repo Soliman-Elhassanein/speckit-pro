@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.0.1 — 2026-10-20
+
+- Documentation: drop the scripts line budget from the design note.
+
 ## 4.0.0 — 2026-10-20
 
 - Build on Spec Kit 1.2.2 through extension hooks, command wraps and template appends.

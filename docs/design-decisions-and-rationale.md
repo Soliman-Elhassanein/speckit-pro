@@ -13,8 +13,7 @@ creation and conventional type generation; configuration supplies defaults, and 
 small after_specify hook applies type/ticket overrides by renaming the current
 branch. This avoids depending on unverified extension-command wrapping support.
 
-The DONE check shares the memory check's entry point to keep the combined scripts
-below 300 lines. It validates recorded structure, never truth or meaning. Analyze
+The DONE check shares the memory check's entry point. It validates recorded structure, never truth or meaning. Analyze
 and converge judge scope, coverage and architecture. A single verification.md holds
 gates, exit codes, log paths, gaps and convergence; no second completion record.
 
