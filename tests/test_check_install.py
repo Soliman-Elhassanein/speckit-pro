@@ -65,10 +65,10 @@ class UpgradeCheckTest(unittest.TestCase):
                     'compatibility: Spec Kit\nmetadata:\n  source: upstream\n---\n' + text)
         path = self.write(target, text)
         if layout == 'skills':
-            link = self.project / '.claude/skills' / name.replace('.', '-')
+            link = self.project / '.claude/skills'
             link.parent.mkdir(parents=True, exist_ok=True)
             if not link.is_symlink():
-                link.symlink_to('../../.agents/skills/' + link.name, target_is_directory=True)
+                link.symlink_to('../.agents/skills', target_is_directory=True)
         return path
 
     def run_check(self):
@@ -85,16 +85,16 @@ class UpgradeCheckTest(unittest.TestCase):
         self.assertIn('PASS shared rule speckit.plan', result.stdout)
         self.assertIn('PASS shared rule speckit.converge', result.stdout)
 
-    def test_copied_claude_skill_is_rejected(self):
+    def test_copied_claude_skills_are_rejected(self):
         self.commands('skills')
-        link = self.project / '.claude/skills/speckit-plan'
-        text = (link / 'SKILL.md').read_text()
+        link = self.project / '.claude/skills'
+        text = (link / 'speckit-plan/SKILL.md').read_text()
         link.unlink()
-        link.mkdir()
-        (link / 'SKILL.md').write_text(text)
+        (link / 'speckit-plan').mkdir(parents=True)
+        (link / 'speckit-plan/SKILL.md').write_text(text)
         result = self.run_check()
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn('FAIL Claude link speckit-plan', result.stdout)
+        self.assertIn('FAIL Claude skills folder link', result.stdout)
 
     def test_old_command_and_composed_layouts_are_not_shared_skills(self):
         for layout in ('commands', 'composed'):

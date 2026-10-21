@@ -122,19 +122,25 @@ skills = sorted(Path('.agents/skills').glob('speckit-*'))
 if not skills or any(not (p / 'SKILL.md').is_file() for p in skills):
     sys.exit('Shared skills missing; inspect specify integration status and the extension/preset installation.')
 if 'claude' in sys.argv[1].split(','):
-    folder = Path('.claude/skills')
-    # Validate all destinations before creating any links. Never replace user skills.
-    for skill in skills:
-        link = folder / skill.name
-        if link.is_symlink():
-            if link.readlink() != Path('../../.agents/skills') / skill.name:
-                sys.exit(f'Conflicting skill link: {link}. Move it aside and rerun; nothing was overwritten.')
-        elif link.exists():
-            sys.exit(f'Conflicting skill directory or file: {link}. Move it aside and rerun; nothing was overwritten.')
-    folder.mkdir(parents=True, exist_ok=True)
-    for skill in skills:
-        link = folder / skill.name
-        if not link.is_symlink():
-            link.symlink_to(Path('../../.agents/skills') / skill.name, target_is_directory=True)
+    folder, target = Path('.claude/skills'), Path('../.agents/skills')
+    # One folder link shows every shared skill to Claude Code. Never replace user skills.
+    if folder.is_dir() and not folder.is_symlink():
+        entries = list(folder.iterdir())
+        if any(not p.is_symlink() or p.readlink() != Path('../../.agents/skills') / p.name
+               for p in entries):
+            sys.exit(f'{folder} holds other skills. Move them into .agents/skills, remove {folder} '
+                     'and rerun; nothing was overwritten.')
+        # Replace the per-skill links of earlier versions.
+        for p in entries:
+            p.unlink()
+        folder.rmdir()
+    if folder.is_symlink():
+        if folder.readlink() != target:
+            sys.exit(f'Conflicting link: {folder}. Move it aside and rerun; nothing was overwritten.')
+    elif folder.exists():
+        sys.exit(f'Conflicting file: {folder}. Move it aside and rerun; nothing was overwritten.')
+    else:
+        folder.parent.mkdir(exist_ok=True)
+        folder.symlink_to(target, target_is_directory=True)
 LINKS
 echo "speckit-pro installed. Start with the speckit-baseline-context command, or speckit-baseline-recover for existing code."

@@ -25,7 +25,7 @@ offline tests cannot establish it.
 One shared `.agents/skills/` folder avoids diverging copies when Spec Kit applies
 presets and extensions only to its default integration. The installer uses the
 Codex integration to render standard skills and Spec Kit's lifecycle commands to
-remove other managed integrations. Claude Code receives relative directory links;
+remove other managed integrations. Claude Code receives one relative folder link;
 this follows the single-copy design of `npx skills`.
 
 Design inspirations: Archive, Spec Roadmap's debrief, Canon, ProductShape and

@@ -72,14 +72,14 @@ except ValueError:
 check('single default integration', state.returncode == 0 and
       state_data.get('default_integration') == 'codex' and
       state_data.get('installed_integrations') == ['codex'])
+linked = (claude.is_symlink() and claude.readlink() == Path('../.agents/skills')
+          and claude.resolve() == shared.resolve())
+check('Claude skills folder link', linked)
 rendered = {}
 for skill in sorted(shared.glob('speckit-*')):
     path = skill / 'SKILL.md'
     link = claude / skill.name
     check('shared directory ' + skill.name, skill.is_dir() and not skill.is_symlink())
-    linked = (link.is_symlink() and link.readlink() == Path('../../.agents/skills') / skill.name
-              and link.resolve() == skill.resolve())
-    check('Claude link ' + skill.name, linked)
     if path.is_file():
         rendered[skill.name] = [path.read_text()]
         check('Claude content ' + skill.name, linked and (link / 'SKILL.md').is_file()
