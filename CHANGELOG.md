@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Documentation: add a command reference describing when to use each command,
+  what it asks, writes and never does, and which commands run as hooks.
+
 ## 4.0.1 — 2026-10-20
 
 - Documentation: drop the scripts line budget from the design note.

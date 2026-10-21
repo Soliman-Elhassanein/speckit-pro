@@ -137,32 +137,12 @@ It cannot recognize every sensitive value; commands must also follow the instruc
 Write-back checks its own changes before commit, rewriting hits generically or
 dropping the row; sensitive matches are never printed by the checker.
 
-## Commands and rules
+## Commands
 
-| Command | Addition |
-|---|---|
-| speckit-baseline-context | Memory, full/light choice, Focus and Delivery conflicts |
-| speckit-baseline-amend | Approve exact rows from proposals, a report, decision record or feature folder |
-| speckit-baseline-recover | Propose initial or updated memory from code, tests and docs |
-| speckit-baseline-check | Read-only structure check, optionally DONE |
-| speckit-baseline-branch | Apply type and ticket id to the upstream-created branch |
-| speckit-constitution | Separate working rules from Spirit and Delivery |
-| speckit-specify | Focus and stable existing requirement IDs |
-| speckit-clarify | Rounds until material questions are resolved or deferred |
-| speckit-plan | Fixed Quality gates table and decided Delivery checks |
-| speckit-tasks | Two paths; [P] only for different files and no shared state |
-| speckit-analyze | Read-only consistency and Focus scope check |
-| speckit-implement | Test-first, gate commands/exits/logs in verification.md |
-| speckit-converge | Architecture review, append-only deduplicated remediation and write-back |
-
-The upstream Git extension also supplies `speckit-git-feature`,
-`speckit-git-validate`, `speckit-git-commit`, `speckit-git-initialize` and
-`speckit-git-remote`. Unwrapped upstream commands include `speckit-checklist` and
-`speckit-taskstoissues`.
-
-Converge returns exactly `tasks_appended`, `gaps_remaining` or `converged`.
-No appended tasks alone does not mean converged. Remediation preserves prior task
-text and checked boxes. verification.md keeps execution, remaining gaps and outcome.
+The [command reference](docs/commands.md) describes every command: when to use it,
+what it asks you, what it writes, what it never does and what it returns. It marks
+which commands run by themselves as hooks and what upstream does before speckit-pro's
+additions.
 
 ## Overrides of upstream behaviour
 
