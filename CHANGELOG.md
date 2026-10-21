@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- `install.sh --agents claude` makes `.claude/skills` one folder link to
+  `../.agents/skills` instead of one link per skill, so every agent shares one
+  skills folder. Earlier per-skill links are replaced; other skills stop the
+  installer with instructions.
+
 ## 4.0.1 — 2026-10-20
 
 - Documentation: drop the scripts line budget from the design note.

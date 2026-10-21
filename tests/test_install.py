@@ -167,39 +167,46 @@ if args[:2] in (['preset', 'add'], ['preset', 'update']):
         self.assertEqual(self.mutation_calls()[:2],
                          ['integration use codex', 'integration uninstall claude'])
 
-    def test_claude_links_every_skill_and_keeps_unrelated_skills(self):
-        other = self.target / '.claude/skills/personal/SKILL.md'
-        other.parent.mkdir(parents=True)
-        other.write_text('personal')
+    def test_claude_gets_one_folder_link_to_shared_skills(self):
+        folder = self.target / '.claude/skills'
         for _ in range(2):
             result = self.install('--agents', 'claude,codex,gemini,cursor,antigravity')
             self.assertEqual(result.returncode, 0, result.stderr)
-            for skill in (self.target / '.agents/skills').iterdir():
-                link = self.target / '.claude/skills' / skill.name
-                self.assertTrue(link.is_symlink())
-                self.assertEqual(str(link.readlink()), '../../.agents/skills/' + skill.name)
-                self.assertEqual(link.resolve(), skill.resolve())
-        self.assertEqual(other.read_text(), 'personal')
+            self.assertTrue(folder.is_symlink())
+            self.assertEqual(str(folder.readlink()), '../.agents/skills')
+            self.assertEqual(folder.resolve(), (self.target / '.agents/skills').resolve())
 
-    def test_conflicting_directory_file_or_link_stops_without_replacing(self):
-        for kind in ('directory', 'file', 'link'):
+    def test_earlier_per_skill_links_become_one_folder_link(self):
+        folder = self.target / '.claude/skills'
+        folder.mkdir(parents=True)
+        (folder / 'speckit-plan').symlink_to('../../.agents/skills/speckit-plan')
+        result = self.install('--agents', 'claude')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(str(folder.readlink()), '../.agents/skills')
+
+    def test_other_skills_file_or_link_stops_without_replacing(self):
+        folder = self.target / '.claude/skills'
+        for kind in ('skills', 'file', 'link'):
             with self.subTest(kind=kind):
-                conflict = self.target / '.claude/skills/speckit-plan'
-                conflict.parent.mkdir(parents=True, exist_ok=True)
-                if kind == 'directory':
-                    conflict.mkdir()
+                folder.parent.mkdir(exist_ok=True)
+                if kind == 'skills':
+                    (folder / 'personal').mkdir(parents=True)
+                    (folder / 'speckit-plan').symlink_to('../../.agents/skills/speckit-plan')
                 elif kind == 'file':
-                    conflict.write_text('keep')
+                    folder.write_text('keep')
                 else:
-                    conflict.symlink_to('missing')
+                    folder.symlink_to('missing')
                 result = self.install('--agents', 'claude')
                 self.assertNotEqual(result.returncode, 0)
-                self.assertIn('Move it aside and rerun', result.stderr)
-                self.assertFalse((conflict.parent / 'speckit-converge').exists())
-                if kind == 'directory':
-                    conflict.rmdir()
+                self.assertIn('nothing was overwritten', result.stderr)
+                if kind == 'skills':
+                    self.assertTrue((folder / 'personal').is_dir())
+                    self.assertTrue((folder / 'speckit-plan').is_symlink())
+                    (folder / 'speckit-plan').unlink()
+                    (folder / 'personal').rmdir()
+                    folder.rmdir()
                 else:
-                    conflict.unlink()
+                    folder.unlink()
 
     def test_integration_failure_stops_before_components(self):
         self.assertNotEqual(self.install(fail='integration').returncode, 0)

@@ -50,12 +50,14 @@ need no extra installation. Claude Code reads `.claude/skills/`, so install with
 ./speckit-pro/install.sh --agents claude ./my-project
 ```
 
-This creates one relative symlink per `speckit-*` skill, including upstream core,
-baseline and Git extension skills. Other Claude skills are untouched. Rerunning
-keeps the same links; a conflicting directory, file or link stops installation
-with instructions to move it aside. Rerun after adding or updating skills.
+This makes `.claude/skills` one relative folder link to `../.agents/skills`, so
+Claude Code sees every shared skill, including ones added later, with no second
+copy. Keep any other skills in `.agents/skills/` too; `npx skills` installs into
+this layout unchanged. A `.claude/skills` folder holding only earlier speckit-pro
+links is replaced; a folder with other skills, or another file or link, stops
+installation with instructions and nothing overwritten.
 `--agents` accepts a comma-separated list: `claude,codex,gemini,cursor,antigravity`;
-only Claude needs links. This works around Spec Kit 1.2.2 applying presets and
+only Claude needs the link. This works around Spec Kit 1.2.2 applying presets and
 extensions only to the default integration. Keep Codex as the sole managed
 integration rather than installing another integration to get its own copies.
 
@@ -181,7 +183,7 @@ text and checked boxes. verification.md keeps execution, remaining gaps and outc
   After a blank line, an optional body explains what and why, wrapped at 72
   characters; `Refs: APP-142` or `Refs: 007` matches the branch id.
 - The installer selects Codex as the sole managed integration for standard skills
-  in `.agents/skills/`; optional Claude links share those exact directories. This
+  in `.agents/skills/`; an optional Claude folder link shares that exact folder. This
   compensates for presets and extensions applying only to the default integration.
 - Clarify overrides the total five-question cap with rounds. Behavior tests precede
   implementation, including where upstream treats them as optional. Converge uses
@@ -217,7 +219,7 @@ sh scripts/check-install.sh 1.2.2
 
 The first command is offline. The second requires network and uv; it creates a temp
 project with that CLI version, initializes it, runs install.sh, and prints PASS/FAIL
-for every shared wrap, Claude symlink and matching content, baseline and Git
+for every shared wrap, the Claude folder link and matching content, baseline and Git
 command, appended template, memory template, Git configuration, branch hook,
 commit convention and checker invocation. It removes the scratch project afterward.
 Validate real installation with this check and a first feature walk-through;
