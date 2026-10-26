@@ -10,8 +10,14 @@ strategy: wrap
   what must stay unchanged, reproduce bugs with a failing test where applicable,
   make the change and run applicable gates. Do not manufacture feature artifacts
   for the light path; neither path may change memory meaning without amend approval.
-- `[P]` only on tasks that touch different files and no shared state within the
-  same phase. If independence is uncertain, leave the marker off.
+- `[P]` only on tasks that touch different files, share no state and depend on no
+  other task in the same phase. A task that must wait for another one ("after T003
+  fails") is never `[P]` beside it: put the test and its implementation in order
+  without the marker, or in consecutive phases. If independence is uncertain, leave
+  the marker off.
+- Each phase must end with every Quality gate passing on that phase's own result: a
+  phase's failing tests and the code that makes them pass belong to the same phase,
+  and Git keeps no empty folders, so a folder a gate needs must receive a file.
 - Behavior tests are required even where upstream marks them optional. Include
   behavior tests before implementation and trace tasks to existing spec
   requirements. Keep IDs, existing text, order and checked boxes; append new work

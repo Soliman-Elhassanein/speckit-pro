@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- `tasks` never marks `[P]` on a task that depends on another task of its phase (such as
+  an implementation that waits for its failing test), restoring upstream's "no
+  dependencies on incomplete tasks" rule that the wrap had dropped. Each phase must end
+  with every Quality gate passing, and a folder a gate needs must receive a file. `analyze`
+  reports both.
 - `install.sh` turns a folder that is not yet a Git repository into one, through the
   upstream Git extension's `initialize_repo.py` (repository plus first commit), so feature
   branches work from the first command. Existing repositories are left alone.
