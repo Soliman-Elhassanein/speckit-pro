@@ -173,7 +173,8 @@ python3 .specify/extensions/baseline/scripts/baseline_check.py --done --feature 
   may run in parallel.
 - **speckit-pro** requires behaviour tests before implementation, even where upstream
   calls them optional, and traces tasks to spec requirements. `[P]` only marks tasks that
-  touch different files and share no state; when in doubt it is left off. The last phase
+  touch different files, share no state and wait for no other task of their phase; when
+  in doubt it is left off. Every phase ends with all Quality gates passing. The last phase
   is `## Phase N: Verification and convergence`. Existing IDs, text, order and ticks are kept.
 
 ### speckit-analyze
