@@ -63,6 +63,11 @@ if args == ['extension', 'add', 'git']:
     config.parent.mkdir(parents=True, exist_ok=True)
     if not config.exists():
         config.write_text('branch_template: ""\\nbranch_prefix: "custom"\\ncommit_style: fixed\\nforeign: kept\\n')
+    script = Path('.specify/extensions/git/scripts/python/initialize_repo.py')
+    script.parent.mkdir(parents=True, exist_ok=True)
+    script.write_text("import subprocess\\nfrom pathlib import Path\\n"
+                      "subprocess.run(['git', 'init', '-q'], check=True)\\n"
+                      "Path('.specify/init-called').write_text('1')\\n")
 presets_file = Path('.specify/mock-presets.json')
 presets = json.loads(presets_file.read_text()) if presets_file.exists() else []
 if args == ['preset', 'list', '--json']:
@@ -111,6 +116,17 @@ if args[:2] in (['preset', 'add'], ['preset', 'update']):
         self.assertEqual(self.install().returncode, 0)
         self.assertEqual(config.read_text(), text)
         self.assertEqual(self.mutation_calls().count('extension add git'), 1)
+
+    def test_new_folder_becomes_a_repository_through_upstream_script(self):
+        result = self.install()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.target / '.git').exists())
+        self.assertEqual((self.target / '.specify/init-called').read_text(), '1')
+
+    def test_existing_repository_is_left_alone(self):
+        subprocess.run(['git', 'init', '-q', str(self.target)], check=True)
+        self.assertEqual(self.install().returncode, 0)
+        self.assertFalse((self.target / '.specify/init-called').exists())
 
     def test_extension_failure_stops_before_preset(self):
         result = self.install(fail='extension')

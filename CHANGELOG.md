@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `install.sh` turns a folder that is not yet a Git repository into one, through the
+  upstream Git extension's `initialize_repo.py` (repository plus first commit), so feature
+  branches work from the first command. Existing repositories are left alone.
 - `install.sh --agents claude` makes `.claude/skills` one folder link to
   `../.agents/skills` instead of one link per skill, so every agent shares one
   skills folder. Earlier per-skill links are replaced; other skills stop the

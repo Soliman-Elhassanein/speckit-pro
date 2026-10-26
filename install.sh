@@ -90,6 +90,12 @@ for key, value in [('branch_template', '"feature/{number}-{slug}"'),
     text = re.sub(pattern, lambda _: line, text, flags=re.M) if re.search(pattern, text, re.M) else text + '\n' + line + '\n'
 path.write_text(text)
 CONFIG
+# A folder that is not a Git repository yet becomes one through upstream's own script, so
+# feature branches work from the first command, before any constitution hook runs.
+init_script=.specify/extensions/git/scripts/python/initialize_repo.py
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1 && [ -f "$init_script" ]; then
+    python3 "$init_script"
+fi
 baseline_installed=$(python3 - <<'INSTALLED'
 import json
 import subprocess

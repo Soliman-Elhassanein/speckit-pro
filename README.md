@@ -37,7 +37,10 @@ Upstream preserves modified files; no upstream files or integration metadata are
 edited by speckit-pro. Resolve any preserved conflicting skills before rerunning.
 
 It adds the upstream Git extension, baseline extension and preset, then sets the
-Git defaults listed below, preserving unrelated settings and memory. `--force`
+Git defaults listed below, preserving unrelated settings and memory. If the project is
+not a Git repository yet, it runs the upstream Git extension's own `initialize_repo.py`,
+which creates the repository and a first commit. Spec Kit's own `.specify/.gitignore`
+keeps machine-local state out of Git; speckit-pro writes no local state of its own. `--force`
 delegates baseline extension and preset updates to upstream. Already installed
 components are kept on ordinary reruns. Run `install.sh --help` for usage.
 
