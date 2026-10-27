@@ -12,7 +12,8 @@ strategy: wrap
   reducing scope or obtaining an approved amendment; do not invent approval.
 - Report missing requirement coverage, contradictions and violations of blocking
   Delivery standards.
-- Report every `[P]` task that depends on another task of its phase, and every phase
+- Report every task that bundles several behaviors or requirements, every `[P]` task
+  that depends on another task of its phase, and every phase
   whose end state cannot pass the plan's Quality gates (for example a gate on a folder
   the phase leaves empty). Scripts validate references; judge meaning here with the user.
 
