@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `tasks` keeps every task small: one behavior or requirement, the few files it needs and
+  one check that proves it. A task that bundled spacing, controls, theme tokens and a sheet
+  layout ran past a 20-minute limit in a real run. `analyze` reports tasks that bundle
+  several behaviors.
 - The closing `Verification and convergence` phase only runs and records the Quality gates.
   Its "run converge" and "DONE check" tasks are gone: implement already runs converge after
   the tasks, so a task worker was running a second, cheaper review that appended and ticked
