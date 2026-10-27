@@ -20,7 +20,12 @@ strategy: wrap
   and Git keeps no empty folders, so a folder a gate needs must receive a file.
 - Behavior tests are required even where upstream marks them optional. Include
   behavior tests before implementation and trace tasks to existing spec
-  requirements. Keep IDs, existing text, order and checked boxes; append new work
+  requirements. A task that writes a failing test saves that failing run's output
+  to its own log file in the feature folder (for example `logs/T004-red.log`), so
+  test-first evidence survives and `[P]` tasks never share a record.
+- The closing phase only runs and records the Quality gates. Converge, its
+  remediation and the DONE check follow the tasks and are never tasks: no task
+  assesses readiness, appends tasks or ticks another task. Keep IDs, existing text, order and checked boxes; append new work
   above the maximum ID. Replace closing-phase markers with real sequential IDs and
   an ascending `## Phase N: Verification and convergence` heading.
 
