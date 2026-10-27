@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- The closing `Verification and convergence` phase only runs and records the Quality gates.
+  Its "run converge" and "DONE check" tasks are gone: implement already runs converge after
+  the tasks, so a task worker was running a second, cheaper review that appended and ticked
+  tasks itself. A task that writes a failing test saves that run to its own log file, so
+  test-first evidence survives parallel tasks.
 - `tasks` never marks `[P]` on a task that depends on another task of its phase (such as
   an implementation that waits for its failing test), restoring upstream's "no
   dependencies on incomplete tasks" rule that the wrap had dropped. Each phase must end

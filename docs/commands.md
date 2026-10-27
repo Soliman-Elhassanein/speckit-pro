@@ -175,7 +175,9 @@ python3 .specify/extensions/baseline/scripts/baseline_check.py --done --feature 
   calls them optional, and traces tasks to spec requirements. `[P]` only marks tasks that
   touch different files, share no state and wait for no other task of their phase; when
   in doubt it is left off. Every phase ends with all Quality gates passing. The last phase
-  is `## Phase N: Verification and convergence`. Existing IDs, text, order and ticks are kept.
+  is `## Phase N: Verification and convergence`; it only runs and records the Quality gates,
+  because converge and the DONE check follow the tasks. Each failing-test task saves its red
+  run to its own log. Existing IDs, text, order and ticks are kept.
 
 ### speckit-analyze
 
