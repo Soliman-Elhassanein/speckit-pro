@@ -172,8 +172,7 @@ python3 .specify/extensions/baseline/scripts/baseline_check.py --done --feature 
 - **Upstream** writes a dependency-ordered `tasks.md` in phases; `[P]` marks tasks that
   may run in parallel.
 - **speckit-pro** requires behaviour tests before implementation, even where upstream
-  calls them optional, and traces tasks to spec requirements. Every task is small: one
-  behaviour or requirement, a few files and one check that proves it. `[P]` only marks tasks that
+  calls them optional, and traces tasks to spec requirements. `[P]` only marks tasks that
   touch different files, share no state and wait for no other task of their phase; when
   in doubt it is left off. Every phase ends with all Quality gates passing. The last phase
   is `## Phase N: Verification and convergence`; it only runs and records the Quality gates,

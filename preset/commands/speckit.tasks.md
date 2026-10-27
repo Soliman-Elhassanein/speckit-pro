@@ -18,10 +18,6 @@ strategy: wrap
 - Each phase must end with every Quality gate passing on that phase's own result: a
   phase's failing tests and the code that makes them pass belong to the same phase,
   and Git keeps no empty folders, so a folder a gate needs must receive a file.
-- Keep every task small: one behavior or one requirement, the few files it needs, and
-  one check that proves it (a test or a gate). Split a task that changes several
-  behaviors, screens or layers, or whose description joins separate changes with "and";
-  a test task and the implementation it proves are separate tasks.
 - Behavior tests are required even where upstream marks them optional. Include
   behavior tests before implementation and trace tasks to existing spec
   requirements. A task that writes a failing test saves that failing run's output
